@@ -1,0 +1,9 @@
+.build/
+.build-agent-*/
+.scratch/
+*.xcodeproj
+.DS_Store
+.sign-identity
+# Private research notes (the scrubbed public copy is docs/wispr-flow-spec.md)
+research/
+.claude/

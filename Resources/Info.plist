@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key><string>en</string>
+    <key>CFBundleExecutable</key><string>FreeFlow</string>
+    <key>CFBundleIdentifier</key><string>com.brianstockwell.freeflow</string>
+    <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+    <key>CFBundleName</key><string>FreeFlow</string>
+    <key>CFBundleDisplayName</key><string>FreeFlow</string>
+    <key>CFBundlePackageType</key><string>APPL</string>
+    <key>CFBundleShortVersionString</key><string>1.0.0</string>
+    <key>CFBundleVersion</key><string>1</string>
+    <key>CFBundleIconFile</key><string>AppIcon</string>
+    <key>LSMinimumSystemVersion</key><string>26.0</string>
+    <key>LSUIElement</key><true/>
+    <key>LSApplicationCategoryType</key><string>public.app-category.productivity</string>
+    <key>NSHighResolutionCapable</key><true/>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>FreeFlow listens while you hold the Fn key so it can transcribe your speech on-device.</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>FreeFlow transcribes your dictation on-device with Apple's speech engine.</string>
+    <key>NSAudioCaptureUsageDescription</key>
+    <string>FreeFlow records the other side of your meetings (system audio) for the Notetaker transcript.</string>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>FreeFlow uses this to detect which app you are typing in.</string>
+    <key>NSSupportsAutomaticTermination</key><false/>
+    <key>NSSupportsSuddenTermination</key><false/>
+</dict>
+</plist>

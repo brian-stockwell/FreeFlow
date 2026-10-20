@@ -1,0 +1,1491 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FreeFlow Tutorial</title>
+<meta name="description" content="Learn FreeFlow, the voice dictation app for Mac, by trying every feature in your browser.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234f46e5'/%3E%3Cg fill='white'%3E%3Crect x='7' y='12' width='3' height='8' rx='1.5'/%3E%3Crect x='12' y='8' width='3' height='16' rx='1.5'/%3E%3Crect x='17' y='5' width='3' height='22' rx='1.5'/%3E%3Crect x='22' y='10' width='3' height='12' rx='1.5'/%3E%3C/g%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #f7f6f3; --surface: #ffffff; --surface-2: #f1efea; --text: #1d1d1f; --muted: #66666d; --line: #e3e0d9;
+  --accent: #4f46e5; --accent-text: #ffffff; --accent-soft: #e9e8fd; --ok: #18864b; --ok-soft: #e3f4ea;
+  --err: #c93434; --err-soft: #fbe7e7; --warn-soft: #fdf3dc; --code-bg: #f1efea;
+  --wall: linear-gradient(140deg, #8fb2ec 0%, #b8a7ea 55%, #f1bca6 100%);
+  --win: #ffffff; --win-bar: #ecebe8; --win-text: #1d1d1f; --sel: #b6d4fd; --menubar: rgba(255,255,255,.55);
+  --shadow: 0 1px 2px rgba(0,0,0,.05), 0 8px 24px rgba(0,0,0,.06);
+  --radius: 14px; color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141416; --surface: #1d1d20; --surface-2: #26262a; --text: #f2f2f4; --muted: #a1a1aa; --line: #34343a;
+    --accent: #8b84ff; --accent-text: #15141f; --accent-soft: #2a2850; --ok: #4cc983; --ok-soft: #183526;
+    --err: #ff7b7b; --err-soft: #3d1f1f; --warn-soft: #3a2f16; --code-bg: #26262a;
+    --wall: linear-gradient(140deg, #2a3d63 0%, #3d3265 55%, #5e3b3a 100%);
+    --win: #29292c; --win-bar: #343437; --win-text: #f2f2f4; --sel: #3b5a8c; --menubar: rgba(30,30,32,.55);
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141416; --surface: #1d1d20; --surface-2: #26262a; --text: #f2f2f4; --muted: #a1a1aa; --line: #34343a;
+  --accent: #8b84ff; --accent-text: #15141f; --accent-soft: #2a2850; --ok: #4cc983; --ok-soft: #183526;
+  --err: #ff7b7b; --err-soft: #3d1f1f; --warn-soft: #3a2f16; --code-bg: #26262a;
+  --wall: linear-gradient(140deg, #2a3d63 0%, #3d3265 55%, #5e3b3a 100%);
+  --win: #29292c; --win-bar: #343437; --win-text: #f2f2f4; --sel: #3b5a8c; --menubar: rgba(30,30,32,.55);
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35); color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+a { color: var(--accent); }
+h1 { font-size: 2rem; line-height: 1.2; margin: 0 0 .5rem; letter-spacing: -.02em; text-wrap: balance; }
+h2 { font-size: 1.2rem; margin: 2rem 0 .5rem; letter-spacing: -.01em; }
+h3 { font-size: 1rem; margin: 1.25rem 0 .25rem; }
+p { margin: .5rem 0 1rem; }
+.lede { font-size: 1.1rem; color: var(--muted); max-width: 62ch; }
+kbd { display: inline-block; min-width: 1.6em; padding: 0 .4em; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; background: var(--surface); font: 600 .8em/1.7 ui-monospace, SFMono-Regular, Menlo, monospace; text-align: center; white-space: nowrap; }
+code { font: .88em ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--code-bg); padding: .1em .35em; border-radius: 5px; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Top bar */
+.top { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 16px; padding: 10px 20px; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
+.brand { display: flex; align-items: center; gap: 10px; color: var(--text); text-decoration: none; font-weight: 700; }
+.brand small { font-weight: 500; color: var(--muted); }
+.logo { width: 28px; height: 28px; border-radius: 8px; background: var(--accent); display: grid; place-items: center; flex: none; }
+.logo svg { width: 18px; height: 18px; fill: var(--accent-text); }
+.top-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.progress { display: flex; align-items: center; gap: 8px; font-size: .85rem; color: var(--muted); }
+.progress .bar { width: 120px; height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.progress .bar i { display: block; height: 100%; width: 0; background: var(--ok); transition: width .4s; }
+.icon-btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; height: 32px; padding: 0 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: .85rem; text-decoration: none; color: var(--text); }
+.icon-btn:hover { background: var(--surface-2); }
+
+/* Layout */
+.layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); max-width: 1200px; margin: 0 auto; }
+.sidebar { position: sticky; top: 53px; align-self: start; height: calc(100vh - 53px); overflow-y: auto; padding: 20px 12px 20px 20px; }
+.sidebar ol { list-style: none; margin: 0; padding: 0; }
+.sidebar a { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 9px; color: var(--text); text-decoration: none; font-size: .93rem; line-height: 1.3; }
+.sidebar a:hover { background: var(--surface-2); }
+.sidebar a[aria-current="page"] { background: var(--accent-soft); font-weight: 600; }
+.sidebar .num { flex: none; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--line); display: grid; place-items: center; font-size: .72rem; color: var(--muted); font-weight: 600; }
+.sidebar .done .num { background: var(--ok); border-color: var(--ok); color: #fff; font-size: 0; }
+.sidebar .done .num::after { content: "✓"; font-size: .75rem; }
+main { padding: 32px 32px 64px; min-width: 0; }
+.lesson { max-width: 820px; }
+.lesson[hidden] { display: none; }
+.lesson-nav { max-width: 820px; display: flex; justify-content: space-between; gap: 12px; margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line); }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 9px 16px; cursor: pointer; font-weight: 600; font-size: .95rem; }
+.btn:hover { background: var(--surface-2); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.small { padding: 5px 10px; font-size: .82rem; border-radius: 8px; }
+.btn[disabled] { opacity: .45; cursor: default; }
+
+/* Cards, callouts, tables */
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 1rem 0; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow); }
+.card b { display: block; margin-bottom: 2px; }
+.card p { margin: 0; color: var(--muted); font-size: .9rem; line-height: 1.45; }
+.callout { border-radius: 12px; padding: 12px 16px; margin: 1rem 0; background: var(--accent-soft); font-size: .95rem; }
+.callout.tip { background: var(--warn-soft); }
+.callout b:first-child { margin-right: 4px; }
+table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: .93rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; }
+.table-wrap { overflow-x: auto; }
+
+/* Tasks */
+.tasks { list-style: none; padding: 14px 16px; margin: 1.25rem 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+.tasks::before { content: "Try it"; display: block; font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); margin-bottom: 6px; }
+.tasks li { position: relative; padding: 5px 0 5px 30px; }
+.tasks li::before { content: ""; position: absolute; left: 0; top: 7px; width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--line); transition: all .25s; }
+.tasks li.done::before { background: var(--ok) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 10.5l3.2 3L15 6.5' stroke='white' stroke-width='2.4' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/16px no-repeat; border-color: var(--ok); }
+.tasks li.done { color: var(--muted); }
+.tasks li.manual { cursor: pointer; }
+.tasks li.manual:hover::before { border-color: var(--ok); }
+.tasks li.just-done { animation: pop .5s; }
+@keyframes pop { 40% { transform: scale(1.04); } }
+.lesson-complete { display: none; margin: 1rem 0; padding: 12px 16px; border-radius: 12px; background: var(--ok-soft); color: var(--ok); font-weight: 600; }
+.lesson.complete .lesson-complete { display: block; }
+
+/* Code blocks */
+.code { position: relative; margin: .75rem 0 1rem; }
+.code pre { margin: 0; padding: 14px 16px; padding-right: 76px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 12px; overflow-x: auto; font: .88rem/1.55 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.code .copy { position: absolute; top: 8px; right: 8px; }
+.tabs { display: inline-flex; gap: 4px; padding: 4px; background: var(--surface-2); border-radius: 10px; margin: .5rem 0; }
+.tabs button { border: 0; background: none; padding: 6px 12px; border-radius: 7px; cursor: pointer; font-size: .9rem; font-weight: 600; color: var(--muted); }
+.tabs button[aria-selected="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+.tabpanel[hidden] { display: none; }
+
+/* ============ Simulated Mac ============ */
+.sim { margin: 1.25rem 0; }
+.mac { position: relative; border-radius: 16px; overflow: hidden; background: var(--wall); box-shadow: var(--shadow); border: 1px solid var(--line); user-select: none; -webkit-user-select: none; }
+.menubar { height: 26px; display: flex; align-items: center; gap: 14px; padding: 0 12px; background: var(--menubar); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); font-size: 12.5px; color: var(--win-text); }
+.menubar .mb-items { color: var(--muted); }
+.menubar .mb-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.mb-ff { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 18px; border-radius: 5px; }
+.mb-ff svg { width: 14px; height: 14px; fill: currentColor; }
+.mb-ff.rec { color: #ff453a; }
+.desk { position: relative; padding: 18px 18px 86px; min-height: 330px; }
+.win { position: relative; max-width: 560px; margin: 0 auto; background: var(--win); color: var(--win-text); border-radius: 11px; box-shadow: 0 12px 40px rgba(0,0,0,.25); overflow: hidden; }
+.win-bar { height: 30px; display: flex; align-items: center; gap: 7px; padding: 0 11px; background: var(--win-bar); font-size: 12.5px; font-weight: 600; }
+.win-bar i { width: 11px; height: 11px; border-radius: 50%; background: #ff5f57; }
+.win-bar i:nth-child(2) { background: #febc2e; } .win-bar i:nth-child(3) { background: #28c840; }
+.win-title { flex: 1; text-align: center; margin-right: 50px; opacity: .8; }
+.win-head { font-size: 13px; border-bottom: 1px solid var(--line); }
+.win-head:empty { display: none; }
+.win-head div { padding: 6px 14px; border-bottom: 1px solid var(--line); }
+.win-head div:last-child { border-bottom: 0; }
+.win-head span { color: var(--muted); margin-right: 6px; }
+.field { min-height: 132px; max-height: 210px; overflow-y: auto; padding: 12px 14px; font-size: 14px; line-height: 1.55; white-space: pre-wrap; word-wrap: break-word; cursor: text; outline: none; }
+.field .ph { color: var(--muted); opacity: .7; }
+.field mark { background: var(--sel); color: inherit; border-radius: 2px; }
+.field .caret { display: inline-block; width: 1.5px; height: 1.15em; vertical-align: text-bottom; background: var(--accent); animation: blink 1.1s steps(1) infinite; margin-left: 1px; }
+@keyframes blink { 50% { opacity: 0; } }
+.field .fresh { background: color-mix(in srgb, var(--ok) 22%, transparent); border-radius: 3px; transition: background 1.6s; }
+.win-tools { display: flex; gap: 6px; padding: 8px 12px; border-top: 1px solid var(--line); background: var(--win-bar); }
+.win-tools:empty { display: none; }
+.dock { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); display: flex; gap: 8px; padding: 6px 8px; border-radius: 16px; background: rgba(255,255,255,.28); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,.35); }
+.dock:empty { display: none; }
+.dock button { position: relative; width: 42px; height: 42px; border-radius: 11px; border: 0; cursor: pointer; color: #fff; font-weight: 800; font-size: 15px; box-shadow: 0 2px 6px rgba(0,0,0,.2); transition: transform .15s; }
+.dock button:hover { transform: translateY(-3px); }
+.dock button[aria-pressed="true"]::after { content: ""; position: absolute; bottom: -5px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: rgba(255,255,255,.9); }
+.dock button span { position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,.75); color: #fff; font-size: 11px; font-weight: 500; padding: 2px 7px; border-radius: 6px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .15s; }
+.dock button:hover span { opacity: 1; }
+
+/* The Flow Bar */
+.pill { position: absolute; left: 50%; bottom: 72px; transform: translateX(-50%); display: flex; align-items: center; gap: 9px; height: 30px; padding: 0 12px; border-radius: 15px; background: #111113; color: #f5f5f7; font-size: 12.5px; box-shadow: 0 6px 20px rgba(0,0,0,.35); white-space: nowrap; max-width: calc(100% - 24px); transition: width .25s, padding .25s; z-index: 2; }
+.dock:empty ~ .pill, .pill.nodock { bottom: 14px; }
+.pill.idle { height: 10px; width: 62px; padding: 0; border-radius: 5px; opacity: .8; }
+.pill .mode { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; padding: 2px 7px; border-radius: 6px; background: #3a3a3c; }
+.pill .mode.clean { background: #4f46e5; } .pill .mode.command { background: #c2410c; } .pill .mode.meeting { background: #b91c1c; }
+.pill .live { overflow: hidden; text-overflow: ellipsis; max-width: 300px; color: #d1d1d6; direction: rtl; text-align: left; }
+.pill .live bdi { direction: ltr; unicode-bidi: isolate; }
+.pill .hf { font-size: 10.5px; color: #a1a1aa; }
+.pill.ok { color: #7ee2a8; } .pill.err { color: #ff8a80; }
+.wave { display: inline-flex; align-items: center; gap: 2px; height: 16px; }
+.wave i { width: 3px; height: 4px; border-radius: 2px; background: #f5f5f7; animation: wv .9s ease-in-out infinite; }
+.wave.quiet i { animation: none; height: 3px; opacity: .6; }
+.wave i:nth-child(2) { animation-delay: -.2s } .wave i:nth-child(3) { animation-delay: -.45s } .wave i:nth-child(4) { animation-delay: -.1s }
+.wave i:nth-child(5) { animation-delay: -.6s } .wave i:nth-child(6) { animation-delay: -.3s } .wave i:nth-child(7) { animation-delay: -.75s }
+@keyframes wv { 0%,100% { height: 4px } 50% { height: 15px } }
+.spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #5a5a5e; border-top-color: #f5f5f7; animation: sp .8s linear infinite; }
+@keyframes sp { to { transform: rotate(360deg); } }
+
+/* Controls under the Mac */
+.sim-ctl { display: grid; gap: 12px; margin-top: 14px; }
+.row-lbl { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-right: 8px; }
+.ctx-line { font-size: .9rem; color: var(--muted); }
+.ctx-line:empty { display: none; }
+.ctx-line b { color: var(--text); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; font-size: .88rem; cursor: pointer; }
+.chip:hover { background: var(--surface-2); }
+.chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+.keys { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+.key { position: relative; min-width: 64px; height: 54px; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line); border-bottom-width: 3px; background: var(--surface); cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; font-size: .8rem; font-weight: 600; touch-action: none; user-select: none; -webkit-user-select: none; transition: transform .06s, background .1s; }
+.key small { font-weight: 500; color: var(--muted); font-size: .68rem; }
+.key.wide { min-width: 150px; }
+.key.fn { border-color: var(--accent); }
+.key.down, .key[aria-pressed="true"] { transform: translateY(2px); border-bottom-width: 1px; background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.key.down small, .key[aria-pressed="true"] small { color: inherit; opacity: .8; }
+.hint { font-size: .9rem; color: var(--muted); min-height: 1.5em; }
+.hint b { color: var(--text); }
+.tfbar { display: flex; flex-wrap: wrap; gap: 6px; }
+.tfbar:empty { display: none; }
+.say:empty { display: none; }
+.diff { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font-size: .92rem; }
+.diff[hidden] { display: none; }
+.diff .lbl { display: block; font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-top: 6px; }
+.diff .lbl:first-child { margin-top: 0; }
+.diff p { margin: 2px 0 6px; white-space: pre-wrap; }
+.diff del { color: var(--err); background: var(--err-soft); text-decoration: line-through; border-radius: 3px; }
+.diff ins { color: var(--ok); background: var(--ok-soft); text-decoration: none; border-radius: 3px; }
+
+/* Key check (welcome) */
+.keycheck { display: flex; flex-wrap: wrap; gap: 8px; margin: 1rem 0; }
+
+/* Styles widget */
+.styles { display: grid; gap: 10px; margin: 1rem 0; }
+.style-row { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 12px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.style-row .seg { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.style-row .seg button { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 4px 10px; font-size: .85rem; cursor: pointer; }
+.style-row .seg button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text); font-weight: 600; }
+.style-row .preview { grid-column: 2; font-size: .95rem; background: var(--surface-2); border-radius: 8px; padding: 6px 10px; }
+.style-row .apps { font-size: .8rem; color: var(--muted); }
+
+/* Dictionary widget */
+.dict { display: grid; gap: 12px; margin: 1rem 0; }
+.dict table { margin: 0; }
+.dict td:last-child { width: 40px; text-align: right; }
+.tag { font-size: .72rem; font-weight: 700; padding: 1px 7px; border-radius: 6px; background: var(--surface-2); color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.tag.snippet { background: var(--accent-soft); color: var(--accent); }
+.form-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+input[type="text"], select, textarea { font: inherit; font-size: .93rem; color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; min-width: 0; }
+input[type="text"] { flex: 1 1 160px; }
+textarea { width: 100%; resize: vertical; }
+.out { background: var(--surface-2); border-radius: 8px; padding: 8px 12px; min-height: 2.4em; white-space: pre-wrap; }
+.out .rep { background: var(--ok-soft); color: var(--ok); border-radius: 3px; font-weight: 600; }
+.x { border: 0; background: none; cursor: pointer; color: var(--muted); font-size: 1.1rem; line-height: 1; padding: 4px 6px; border-radius: 6px; }
+.x:hover { background: var(--surface-2); color: var(--err); }
+
+/* Meetings widget */
+.meet { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); margin: 1.25rem 0; }
+.meet-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+.meet-head .title { font-weight: 700; margin-right: auto; }
+.badge { font-size: .75rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+.badge.rec { background: var(--err-soft); color: var(--err); }
+.badge.rec::before { content: "● "; animation: blink 1.2s steps(1) infinite; }
+.timer { font: 600 .9rem ui-monospace, Menlo, monospace; color: var(--muted); }
+.meet-body { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
+.transcript { padding: 12px 16px; min-height: 260px; max-height: 340px; overflow-y: auto; border-right: 1px solid var(--line); font-size: .92rem; }
+.transcript .empty { color: var(--muted); }
+.seg-line { display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 8px; padding: 4px 0; }
+.seg-line .who { font-size: .75rem; font-weight: 700; padding-top: 2px; }
+.seg-line.me .who { color: var(--accent); } .seg-line.them .who { color: var(--ok); }
+.seg-line.live .txt { color: var(--muted); }
+.meet-side { padding: 12px 16px; display: grid; gap: 8px; align-content: start; }
+.summary { padding: 16px; border-top: 1px solid var(--line); font-size: .95rem; }
+.summary:empty { display: none; }
+.summary h3:first-child { margin-top: 0; }
+.summary ul { margin: .25rem 0 .75rem; padding-left: 1.25rem; }
+.summary .todo { list-style: none; margin-left: -1.25rem; }
+.summary .todo::before { content: "☐ "; color: var(--muted); }
+.ask { padding: 0 16px 16px; }
+.ask[hidden] { display: none; }
+.answer { margin-top: 8px; padding: 10px 12px; border-radius: 10px; background: var(--accent-soft); font-size: .93rem; }
+.answer:empty { display: none; }
+
+/* History + cost */
+.history { list-style: none; margin: 1rem 0; padding: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--surface); }
+.history li { display: grid; grid-template-columns: 70px 110px minmax(0, 1fr); gap: 10px; padding: 9px 14px; border-bottom: 1px solid var(--line); font-size: .9rem; }
+.history li:last-child { border-bottom: 0; }
+.history .t { color: var(--muted); font-variant-numeric: tabular-nums; }
+.history .m { font-size: .75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; padding-top: 2px; }
+.history .txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history .none { display: block; color: var(--muted); }
+.calc { display: grid; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin: 1rem 0; box-shadow: var(--shadow); }
+.calc label { display: grid; grid-template-columns: 220px minmax(0, 1fr) 70px; gap: 12px; align-items: center; font-size: .93rem; }
+.calc output { font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+.calc input[type="range"] { width: 100%; accent-color: var(--accent); }
+.total { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+.total .big { font-size: 2rem; font-weight: 800; letter-spacing: -.02em; }
+.total .note { color: var(--muted); font-size: .85rem; }
+.cheat td:first-child { white-space: nowrap; }
+
+/* Mobile */
+.mobile-nav { display: none; }
+@media (max-width: 900px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .sidebar { display: none; }
+  .mobile-nav { display: block; padding: 12px 16px 0; }
+  .mobile-nav select { width: 100%; }
+  main { padding: 20px 16px 48px; }
+  .progress .bar { width: 64px; }
+  .brand small { display: none; }
+  .meet-body { grid-template-columns: minmax(0, 1fr); }
+  .transcript { border-right: 0; border-bottom: 1px solid var(--line); }
+  .style-row { grid-template-columns: minmax(0, 1fr); }
+  .style-row .preview { grid-column: 1; }
+  .calc label { grid-template-columns: minmax(0, 1fr) 60px; }
+  .calc label input { grid-column: 1 / -1; grid-row: 2; }
+  .history li { grid-template-columns: 56px minmax(0, 1fr); }
+  .history .m { display: none; }
+}
+@media (max-width: 560px) {
+  h1 { font-size: 1.6rem; }
+  .top { padding: 10px 16px; gap: 10px; }
+  .top .gh-label { display: none; }
+  .desk { padding: 12px 10px 80px; min-height: 300px; }
+  .key { min-width: 54px; height: 50px; }
+  .key.wide { min-width: 100px; }
+  .pill .live { max-width: 150px; }
+  .menubar .mb-items { display: none; }
+}
+@media print {
+  .top, .sidebar, .mobile-nav, .lesson-nav, .tasks, .btn { display: none !important; }
+  .lesson[hidden] { display: none; }
+  main { padding: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="#welcome">
+    <span class="logo"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="9" width="3" height="6" rx="1.5"/><rect x="8" y="6" width="3" height="12" rx="1.5"/><rect x="13" y="3" width="3" height="18" rx="1.5"/><rect x="18" y="7.5" width="3" height="9" rx="1.5"/></svg></span>
+    FreeFlow <small>Interactive tutorial</small>
+  </a>
+  <div class="top-right">
+    <div class="progress" aria-live="polite"><div class="bar"><i id="progressBar"></i></div><span id="progressText">0 of 13</span></div>
+    <a class="icon-btn" href="https://github.com/brian-stockwell/FreeFlow"><svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0a8 8 0 0 0-2.53 15.59c.4.07.55-.17.55-.38v-1.33c-2.23.48-2.7-1.07-2.7-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.06-.49.06-.49.8.06 1.23.83 1.23.83.72 1.22 1.88.87 2.34.66.07-.52.28-.87.5-1.07-1.78-.2-3.65-.89-3.65-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8 8 0 0 0 8 0Z"/></svg><span class="gh-label">GitHub</span></a>
+    <button class="icon-btn" id="themeBtn" type="button" aria-label="Switch light or dark theme">◐</button>
+  </div>
+</header>
+<div class="mobile-nav"><label class="row-lbl" for="lessonSelect">Lesson</label><select id="lessonSelect"></select></div>
+<div class="layout">
+<nav class="sidebar" aria-label="Lessons"><ol id="lessonList"></ol></nav>
+<main id="main">
+
+<!-- 1 -->
+<section class="lesson" id="welcome" data-title="Welcome">
+  <h1>Learn FreeFlow in 15 minutes</h1>
+  <p class="lede">FreeFlow turns your voice into text in any app on your Mac. Hold a key, talk, let go, and your words appear wherever you were typing. This page lets you try every feature in your browser before you install anything.</p>
+  <div class="grid">
+    <div class="card"><b>Free speech recognition</b><p>Transcription runs on your Mac with Apple's speech engine. No subscription.</p></div>
+    <div class="card"><b>Claude when you want it</b><p>Add one key and Claude cleans up what you said, for about $0.0002 a dictation.</p></div>
+    <div class="card"><b>Works everywhere</b><p>Mail, Slack, docs, your code editor, a browser. If you can type there, you can talk there.</p></div>
+    <div class="card"><b>Meeting notes</b><p>Live transcripts of calls and lectures, with a summary and your to-dos at the end.</p></div>
+  </div>
+  <h2>How this tutorial works</h2>
+  <p>Most lessons have a small pretend Mac. On a real Mac you'll use the <kbd>fn</kbd> key (it may show a 🌐 globe). Browsers can't see that key, so <b>here you hold <kbd>F</kbd> instead</b>. <kbd>control</kbd>, <kbd>option</kbd>, <kbd>space</kbd> and <kbd>esc</kbd> are the real keys. On a phone or tablet, press and hold the on-screen keys.</p>
+  <div class="keycheck" id="keycheck"></div>
+  <ul class="tasks">
+    <li data-task="keycheck">Press and hold <kbd>F</kbd> (or the on-screen <b>fn</b> key above) to check that it works</li>
+  </ul>
+  <p class="callout"><b>Nothing here listens to you.</b> The "speech" in this tutorial is scripted, and nothing you do is sent anywhere. Your progress is saved in this browser only.</p>
+  <div class="lesson-complete">Your keys work. On to installing FreeFlow.</div>
+</section>
+
+<!-- 2 -->
+<section class="lesson" id="install" data-title="Install FreeFlow">
+  <h1>Install FreeFlow</h1>
+  <p class="lede">FreeFlow is built from source on your Mac. It takes about five minutes. You can also skip ahead and finish the tutorial in your browser first.</p>
+  <h2>What you need</h2>
+  <ul>
+    <li>A Mac running <b>macOS 26</b> or later</li>
+    <li><b>Xcode 26</b>, free from the Mac App Store. Open it once after installing so it can finish setting up.</li>
+    <li>An <b>Anthropic API key</b> from <a href="https://console.anthropic.com" target="_blank" rel="noopener">console.anthropic.com</a>, for the Claude features. Plain dictation works without one.</li>
+  </ul>
+  <h2>1. Get the code</h2>
+  <div class="tabs" role="tablist">
+    <button role="tab" aria-selected="true" aria-controls="dl-zip" id="tab-zip">Download ZIP</button>
+    <button role="tab" aria-selected="false" aria-controls="dl-git" id="tab-git">Use git</button>
+  </div>
+  <div class="tabpanel" id="dl-zip" role="tabpanel" aria-labelledby="tab-zip">
+    <p><a class="btn primary" href="https://github.com/brian-stockwell/FreeFlow/archive/refs/heads/main.zip" style="display:inline-block;text-decoration:none">Download FreeFlow (ZIP)</a></p>
+    <p>Open the ZIP in Finder to unpack it. Then open <b>Terminal</b> (in Applications → Utilities) and run:</p>
+    <div class="code"><pre><code>cd ~/Downloads/FreeFlow-main</code></pre><button class="btn small copy" type="button">Copy</button></div>
+  </div>
+  <div class="tabpanel" id="dl-git" role="tabpanel" aria-labelledby="tab-git" hidden>
+    <div class="code"><pre><code>git clone https://github.com/brian-stockwell/FreeFlow.git
+cd FreeFlow</code></pre><button class="btn small copy" type="button">Copy</button></div>
+  </div>
+  <h2>2. Build and launch</h2>
+  <div class="code"><pre><code>scripts/build.sh --run</code></pre><button class="btn small copy" type="button">Copy</button></div>
+  <p>This builds the app, signs it, installs it to the <b>Applications</b> folder in your home folder and opens it. A waveform icon appears in your menu bar. FreeFlow lives there, not in the Dock.</p>
+  <p class="callout tip"><b>Tip:</b> the build signs FreeFlow with your Apple Development certificate if you have one. That way macOS remembers your permissions when you update. To get one, open Xcode → Settings → Accounts, add your Apple ID, then choose Manage Certificates → + → Apple Development. A free Apple ID works. Without a certificate FreeFlow still runs, but macOS asks for its permissions again after every rebuild.</p>
+  <h2>3. Finish setup</h2>
+  <p>On first launch FreeFlow opens <b>Settings</b>. Work down the Setup section until every row has a green check:</p>
+  <div class="table-wrap"><table>
+    <tr><th>Row</th><th>What to do</th><th>Why</th></tr>
+    <tr><td>Microphone</td><td>Click <b>Allow</b></td><td>So it can hear you</td></tr>
+    <tr><td>Accessibility</td><td>Open System Settings and switch FreeFlow on</td><td>For the hotkeys, and to paste into the right text field</td></tr>
+    <tr><td>Input Monitoring</td><td>Open System Settings and switch FreeFlow on</td><td>To notice when you press fn</td></tr>
+    <tr><td>Speech model</td><td>Click <b>Download</b></td><td>Apple's on-device model for your language</td></tr>
+    <tr><td>Claude API key</td><td>Paste it, then click <b>Test key</b></td><td>Stored in your Mac's Keychain, never in plain text</td></tr>
+  </table></div>
+  <p class="callout"><b>Coming from Wispr Flow?</b> FreeFlow imports your Wispr dictionary, snippets, writing styles and email signature the first time it starts.</p>
+  <ul class="tasks">
+    <li class="manual" data-task="inst-built" role="checkbox" tabindex="0" aria-checked="false">FreeFlow is built and its waveform icon is in my menu bar (click to check off)</li>
+    <li class="manual" data-task="inst-setup" role="checkbox" tabindex="0" aria-checked="false">Every row in Settings → Setup is green (click to check off)</li>
+  </ul>
+  <div class="lesson-complete">FreeFlow is installed. Time for your first dictation.</div>
+</section>
+
+<!-- 3 -->
+<section class="lesson" id="raw" data-title="Your first dictation">
+  <h1>Your first dictation</h1>
+  <p class="lede">Click into any text field, hold <kbd>fn</kbd>, say something and let go. FreeFlow pastes exactly what it heard.</p>
+  <p>Plain <kbd>fn</kbd> uses Apple's speech recognition on your Mac, so it's free, private and quick. It types every word you say, though, including the ums. Lesson 4 fixes that.</p>
+  <div class="sim-slot"></div>
+  <ul class="tasks">
+    <li data-task="raw-full">Hold <kbd>F</kbd> (your stand-in for fn) until the sentence finishes, then let go</li>
+    <li data-task="raw-tap">Tap <kbd>F</kbd> quickly. Nothing is pasted, because FreeFlow ignores accidental taps.</li>
+  </ul>
+  <p class="callout tip"><b>Watch the bottom of the screen.</b> That dark pill is the <b>Flow Bar</b>. It grows while FreeFlow listens and shows the words it's hearing.</p>
+  <div class="lesson-complete">That's push-to-talk. Next: let Claude tidy it up.</div>
+</section>
+
+<!-- 4 -->
+<section class="lesson" id="clean" data-title="Let Claude clean it up">
+  <h1>Let Claude clean it up</h1>
+  <p class="lede">Hold <kbd>fn</kbd> + <kbd>control</kbd> instead, and FreeFlow sends the transcript to Claude before pasting.</p>
+  <p>Claude removes fillers and stutters, fixes grammar and punctuation, writes numbers the way you'd type them and turns spoken lists into real lists. It keeps your words and your voice. It doesn't rewrite you.</p>
+  <div class="sim-slot"></div>
+  <ul class="tasks">
+    <li data-task="clean-full">Hold <kbd>control</kbd> + <kbd>F</kbd> and let the sentence finish</li>
+    <li data-task="clean-backtrack">Pick <b>"coffee at two, actually three"</b> and dictate it with control. Only your correction is kept.</li>
+    <li data-task="clean-list">Pick <b>"first, second, third"</b> and dictate it with control to get a numbered list</li>
+    <li data-task="clean-switch">Start with <kbd>F</kbd> alone, then tap <kbd>control</kbd> while you're still talking</li>
+  </ul>
+  <p class="callout"><b>Changed your mind mid-sentence?</b> Say "actually", "no wait", "scratch that" or just restate it. FreeFlow keeps only the corrected version. "I actually loved it" stays as it is.</p>
+  <p class="callout tip"><b>Never lose a dictation.</b> If Claude can't be reached, FreeFlow pastes the plain transcript instead and tells you.</p>
+  <div class="lesson-complete">Nice. Next: how FreeFlow adapts to the app you're in.</div>
+</section>
+
+<!-- 5 -->
+<section class="lesson" id="context" data-title="It knows where you're typing">
+  <h1>It knows where you're typing</h1>
+  <p class="lede">FreeFlow checks which app you're in, and in a browser which website, then formats your words to fit.</p>
+  <p>Emails get a greeting and a sign-off. Chat messages stay short. It also reads the text around your cursor and names on screen, so it can continue your sentence and spell the people you're writing to correctly. Use the Dock to switch apps.</p>
+  <div class="sim-slot"></div>
+  <ul class="tasks">
+    <li data-task="ctx-mail">Dictate the message into <b>Mail</b> with <kbd>control</kbd> + <kbd>F</kbd></li>
+    <li data-task="ctx-chat">Switch to <b>Slack</b> or <b>Messages</b> in the Dock and dictate the same thing</li>
+  </ul>
+  <h2>The categories</h2>
+  <div class="table-wrap"><table>
+    <tr><th>Category</th><th>For example</th></tr>
+    <tr><td>Email</td><td>Mail, Outlook, Superhuman, Gmail and other webmail</td></tr>
+    <tr><td>Work messages</td><td>Slack, Teams, Discord, Linear, Notion</td></tr>
+    <tr><td>Personal messages</td><td>Messages, WhatsApp, Telegram, Signal</td></tr>
+    <tr><td>AI prompts</td><td>Claude, ChatGPT, Cursor, VS Code, Terminal</td></tr>
+    <tr><td>Documents</td><td>Word, Pages, Notes, Obsidian, Google Docs</td></tr>
+    <tr><td>Other</td><td>Everything else</td></tr>
+  </table></div>
+  <p>If an app lands in the wrong category, you can move it on FreeFlow's <b>Style</b> page.</p>
+  <div class="lesson-complete">Next: choose the tone for each kind of app.</div>
+</section>
+
+<!-- 6 -->
+<section class="lesson" id="styles" data-title="Pick a writing style">
+  <h1>Pick a writing style</h1>
+  <p class="lede">Each category has its own tone, set on FreeFlow's <b>Style</b> page. Change one below and watch the same sentence change.</p>
+  <p>You said: <i>"sounds good see you at three tomorrow"</i></p>
+  <div class="styles" id="styleRows"></div>
+  <ul class="tasks">
+    <li data-task="style-change">Change any category's style</li>
+  </ul>
+  <p>The Style page also has your <b>email signature</b>, which FreeFlow uses when it signs off an email, and a <b>cleanup level</b>. Light, the default, removes fillers and fixes grammar. Medium also tightens wordy sentences. None just punctuates.</p>
+  <div class="lesson-complete">Next: talking without holding a key.</div>
+</section>
+
+<!-- 7 -->
+<section class="lesson" id="handsfree" data-title="Hands-free and cancel">
+  <h1>Hands-free and cancel</h1>
+  <p class="lede">For longer thoughts you don't have to keep holding the key. FreeFlow keeps listening until you tap <kbd>fn</kbd> again.</p>
+  <p>Start hands-free with <kbd>fn</kbd> + <kbd>space</kbd>, or double-tap <kbd>fn</kbd>. Press <kbd>esc</kbd> at any point to throw a recording away.</p>
+  <div class="sim-slot"></div>
+  <ul class="tasks">
+    <li data-task="hf-space">Hold <kbd>F</kbd>, press <kbd>space</kbd>, let go of both and keep "talking". Tap <kbd>F</kbd> when you're done.</li>
+    <li data-task="hf-double">Double-tap <kbd>F</kbd> (or the on-screen fn key) to start hands-free, then tap it again to finish</li>
+    <li data-task="hf-cancel">Start any recording and press <kbd>esc</kbd> to cancel it</li>
+  </ul>
+  <p class="callout tip"><b>Good to know:</b> a dictation stops by itself after 20 minutes, with a warning a minute before. You can change the limit in Settings.</p>
+  <div class="lesson-complete">Next: editing text with your voice.</div>
+</section>
+
+<!-- 8 -->
+<section class="lesson" id="command" data-title="Command Mode">
+  <h1>Command Mode: edit with your voice</h1>
+  <p class="lede">Select some text, hold <kbd>fn</kbd> + <kbd>option</kbd>, and say what you want changed.</p>
+  <p>FreeFlow sends your instruction and the selected text to Claude, then swaps in the result. With nothing selected, it works on the whole text field. Click the text in the window to select it.</p>
+  <div class="sim-slot"></div>
+  <ul class="tasks">
+    <li data-task="cmd-one">Select the text, then hold <kbd>option</kbd> + <kbd>F</kbd> and give an instruction</li>
+    <li data-task="cmd-two">Try a second instruction. Click <b>Reset text</b> first if you like.</li>
+  </ul>
+  <p class="callout tip"><b>Already talking?</b> Tap <kbd>option</kbd> while holding fn to switch into Command Mode mid-sentence. If no text field is active, the result is copied to your clipboard instead.</p>
+  <div class="lesson-complete">Next: one-key rewrites.</div>
+</section>
+
+<!-- 9 -->
+<section class="lesson" id="transforms" data-title="Transforms">
+  <h1>Transforms: one-key rewrites</h1>
+  <p class="lede">Transforms are saved instructions on a shortcut. Select text, press one, and the result replaces it.</p>
+  <p>With nothing selected, a Transform rewrites the whole field. In an empty field it works on your last dictation from the past minute. You can edit these and create your own on FreeFlow's <b>Transforms</b> page. Here, press <kbd>option</kbd> + a number, or click a button.</p>
+  <div class="sim-slot"></div>
+  <ul class="tasks">
+    <li data-task="tf-polish">Press <kbd>option</kbd> + <kbd>1</kbd> to <b>Polish</b> the rambling text</li>
+    <li data-task="tf-other">Click <b>Reset text</b>, then try another Transform (<kbd>option</kbd> + <kbd>2</kbd> to <kbd>5</kbd>)</li>
+  </ul>
+  <div class="lesson-complete">Next: teach FreeFlow your words.</div>
+</section>
+
+<!-- 10 -->
+<section class="lesson" id="dictionary" data-title="Dictionary and snippets">
+  <h1>Dictionary and snippets</h1>
+  <p class="lede">Teach FreeFlow the names, brands and jargon it gets wrong.</p>
+  <p>A <b>word</b> makes sure something is always spelled your way. A <b>replacement</b> turns what the speech engine hears into what you meant. A <b>snippet</b> expands a short phrase you say into longer text, like your address or a meeting link. Try it below. The test box shows what FreeFlow would type.</p>
+  <div class="dict" id="dict"></div>
+  <ul class="tasks">
+    <li data-task="dict-add">Add a word or replacement of your own</li>
+    <li data-task="dict-snippet">Add a snippet, then type its trigger phrase into the test box</li>
+  </ul>
+  <p class="callout"><b>It also learns on its own.</b> If you fix a name or an unusual word right after FreeFlow pastes it, FreeFlow notices and adds that word to your dictionary.</p>
+  <div class="lesson-complete">Next: meeting notes.</div>
+</section>
+
+<!-- 11 -->
+<section class="lesson" id="meetings" data-title="Meetings and lectures">
+  <h1>Meetings and lectures</h1>
+  <p class="lede">Press <kbd>option</kbd> + <kbd>N</kbd> to record a meeting, and again to stop.</p>
+  <p>FreeFlow transcribes your microphone as <b>Me</b> and your Mac's sound (the other people on the call) as <b>Them</b>, live and on your Mac. When you stop, Claude writes a summary, the decisions and everyone's to-dos. In a class? Tap <kbd>control</kbd> on its own while recording to switch to <b>Lecture</b> mode, which writes study notes instead.</p>
+  <div id="meet"></div>
+  <ul class="tasks">
+    <li data-task="mt-record">Start a meeting with <kbd>option</kbd> + <kbd>N</kbd> (or the button), let a few lines come in, then stop it</li>
+    <li data-task="mt-lecture">While recording, tap <kbd>control</kbd> on its own to switch to Lecture mode</li>
+    <li data-task="mt-ask">After the summary appears, ask a question about the meeting</li>
+  </ul>
+  <p class="callout tip"><b>Private by design:</b> meeting audio is deleted as soon as the transcript is saved. FreeFlow can also notice when you join a Zoom, Teams, Meet, Webex or FaceTime call and offer to record it.</p>
+  <div class="lesson-complete">Next: the FreeFlow window and what this all costs.</div>
+</section>
+
+<!-- 12 -->
+<section class="lesson" id="hub" data-title="Your FreeFlow window">
+  <h1>Your FreeFlow window</h1>
+  <p class="lede">Click the waveform icon in the menu bar and choose <b>Open FreeFlow</b>.</p>
+  <h2>Paste it again</h2>
+  <p>Clicked away before the paste landed? <kbd>⌘</kbd> + <kbd>control</kbd> + <kbd>V</kbd> pastes your last transcript again, and <kbd>⌘</kbd> + <kbd>control</kbd> + <kbd>C</kbd> copies it.</p>
+  <div class="sim-slot"></div>
+  <ul class="tasks">
+    <li data-task="hub-paste">Paste your last transcript with <kbd>⌘</kbd> + <kbd>control</kbd> + <kbd>V</kbd> (or the on-screen key)</li>
+    <li data-task="hub-cost">Move a slider in the cost calculator below</li>
+  </ul>
+  <h2>What's inside</h2>
+  <div class="grid">
+    <div class="card"><b>Home</b><p>Every dictation, with what you said and what was pasted.</p></div>
+    <div class="card"><b>Meetings</b><p>Transcripts, summaries, to-dos and "ask about this meeting".</p></div>
+    <div class="card"><b>Scratchpad</b><p>Quick notes you can dictate into.</p></div>
+    <div class="card"><b>Dictionary</b><p>Your words, replacements and snippets.</p></div>
+    <div class="card"><b>Style</b><p>Tone per category, app mappings, email signature.</p></div>
+    <div class="card"><b>Transforms</b><p>Edit the built-ins or add your own.</p></div>
+    <div class="card"><b>Insights</b><p>Words per minute, streaks and your exact API cost.</p></div>
+    <div class="card"><b>Settings</b><p>Permissions, models, microphone, sounds, data.</p></div>
+  </div>
+  <h2>Your history from this tutorial</h2>
+  <p>FreeFlow's Home page keeps a list like this one.</p>
+  <ul class="history" id="history"></ul>
+  <h2>What it costs</h2>
+  <p>FreeFlow is free. You pay Anthropic only for the Claude calls you make, and plain <kbd>fn</kbd> dictation never calls Claude. Your actual spending is on the <b>Insights</b> page.</p>
+  <div class="calc" id="calc"></div>
+  <div class="lesson-complete">Last stop: your cheat sheet.</div>
+</section>
+
+<!-- 13 -->
+<section class="lesson" id="cheatsheet" data-title="Cheat sheet">
+  <h1>Cheat sheet</h1>
+  <p class="lede">Everything on one page. Print it or keep this tab open.</p>
+  <p><button class="btn" type="button" id="printBtn">Print cheat sheet</button></p>
+  <div class="table-wrap"><table class="cheat">
+    <tr><th>Keys</th><th>What it does</th></tr>
+    <tr><td><kbd>fn</kbd> hold</td><td>Dictate. On-device and free, pasted exactly as heard.</td></tr>
+    <tr><td><kbd>fn</kbd> + <kbd>control</kbd> hold</td><td>Dictate, cleaned up by Claude for the app you're in</td></tr>
+    <tr><td><kbd>fn</kbd> + <kbd>option</kbd> hold</td><td>Command Mode: say how to change the selected text</td></tr>
+    <tr><td><kbd>fn</kbd> + <kbd>space</kbd>, or double-tap <kbd>fn</kbd></td><td>Hands-free. Tap <kbd>fn</kbd> to finish.</td></tr>
+    <tr><td><kbd>control</kbd> / <kbd>option</kbd> while talking</td><td>Switch to cleanup / Command Mode mid-sentence</td></tr>
+    <tr><td><kbd>esc</kbd></td><td>Cancel the recording</td></tr>
+    <tr><td><kbd>⌘</kbd> <kbd>control</kbd> <kbd>V</kbd></td><td>Paste the last transcript again</td></tr>
+    <tr><td><kbd>⌘</kbd> <kbd>control</kbd> <kbd>C</kbd></td><td>Copy the last transcript</td></tr>
+    <tr><td><kbd>option</kbd> <kbd>1</kbd> to <kbd>5</kbd></td><td>Transforms: Polish, Prompt Engineer, Turn into a list, Make it concise, Fix grammar only</td></tr>
+    <tr><td><kbd>option</kbd> <kbd>N</kbd></td><td>Start or stop recording a meeting</td></tr>
+    <tr><td><kbd>control</kbd> tap, while recording a meeting</td><td>Switch between Meeting and Lecture mode</td></tr>
+  </table></div>
+  <h2>If something's off</h2>
+  <div class="table-wrap"><table>
+    <tr><th>Problem</th><th>Fix</th></tr>
+    <tr><td>Nothing happens when I hold fn</td><td>Settings → Setup: switch on Accessibility and Input Monitoring for FreeFlow, then click <b>Retry</b> next to Hotkeys.</td></tr>
+    <tr><td>The emoji picker opens</td><td>System Settings → Keyboard → "Press 🌐 key to" → <b>Do Nothing</b></td></tr>
+    <tr><td>"No speech detected"</td><td>Check the speech model is downloaded and the right microphone is picked in Settings → Dictation.</td></tr>
+    <tr><td>"Pasted raw transcript"</td><td>Claude couldn't be reached. Check your internet connection, and test your API key in Settings.</td></tr>
+    <tr><td>Text went to the clipboard, not the app</td><td>No text field was active. Click into one and press <kbd>⌘</kbd> <kbd>control</kbd> <kbd>V</kbd>.</td></tr>
+    <tr><td>Permissions reset after an update</td><td>Build with the same Apple Development certificate each time (see Install).</td></tr>
+  </table></div>
+  <div class="callout"><b>You're done.</b> Found a bug or have an idea? <a href="https://github.com/brian-stockwell/FreeFlow/issues" target="_blank" rel="noopener">Open an issue on GitHub</a>. Want to work on FreeFlow itself? Start with the <a href="https://github.com/brian-stockwell/FreeFlow/blob/main/docs/CONTRIBUTING.md" target="_blank" rel="noopener">contributor guide</a>.</div>
+</section>
+
+<div class="lesson-nav">
+  <button class="btn" id="prevBtn" type="button">← Back</button>
+  <button class="btn primary" id="nextBtn" type="button">Next →</button>
+</div>
+</main>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+// ---------- Utilities ----------
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const cap = s => s ? s[0].toUpperCase() + s.slice(1) : s;
+const now = () => performance.now();
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('freeflow-tutorial:' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('freeflow-tutorial:' + k, JSON.stringify(v)); } catch (e) {} }
+};
+const sentences = t => t.replace(/([.!?])\s+/g, '$1\n').split('\n').map(s => s.trim()).filter(Boolean);
+const endPunct = s => /[.!?:]$/.test(s) ? s : s + '.';
+const WAVE_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="9" width="3" height="6" rx="1.5"/><rect x="8" y="6" width="3" height="12" rx="1.5"/><rect x="13" y="3" width="3" height="18" rx="1.5"/><rect x="18" y="7.5" width="3" height="9" rx="1.5"/></svg>';
+
+/** Simple stand-in for the cleanup when the user lets go before the scripted sentence finishes. */
+function quickClean(t) {
+  let s = ' ' + t + ' ';
+  s = s.replace(/,?\s\b(um|uh|er|ah|hmm|basically|you know|i mean)\b,?/gi, ' ');
+  s = s.replace(/\b(\w+)(,?\s+\1\b)+/gi, '$1');
+  s = s.replace(/\s+/g, ' ').trim().replace(/^(okay|so|well)[, ]+/i, '').replace(/^(so)[, ]+/i, '').replace(/,\s*$/, '');
+  return s ? endPunct(cap(s)) : s;
+}
+const bulletize = t => sentences(t).map(s => '- ' + cap(s.replace(/^[-•\d.)\s]+/, '').replace(/[.!?]+$/, ''))).join('\n');
+
+/** Word-level diff (LCS) used to show what cleanup changed. */
+function wordDiff(a, b) {
+  const ta = a.split(/(\s+)/), tb = b.split(/(\s+)/);
+  const wa = ta.filter((_, i) => i % 2 === 0), wb = tb.filter((_, i) => i % 2 === 0);
+  const n = w => w.toLowerCase().replace(/[^\p{L}\p{N}']/gu, '');
+  const L = Array.from({ length: wa.length + 1 }, () => new Array(wb.length + 1).fill(0));
+  for (let i = wa.length - 1; i >= 0; i--) for (let j = wb.length - 1; j >= 0; j--)
+    L[i][j] = n(wa[i]) && n(wa[i]) === n(wb[j]) ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+  const keepA = new Set(), keepB = new Set();
+  let i = 0, j = 0;
+  while (i < wa.length && j < wb.length) {
+    if (n(wa[i]) && n(wa[i]) === n(wb[j])) { keepA.add(i); keepB.add(j); i++; j++; }
+    else if (L[i + 1][j] >= L[i][j + 1]) i++; else j++;
+  }
+  const render = (tokens, keep, tag) => tokens.map((t, k) => k % 2 ? esc(t) : (keep.has(k / 2) || !t ? esc(t) : `<${tag}>${esc(t)}</${tag}>`)).join('');
+  return { a: render(ta, keepA, 'del'), b: render(tb, keepB, 'ins') };
+}
+
+// ---------- Content for the simulator ----------
+const APPS = {
+  textedit: { name: 'TextEdit', title: 'Untitled', cat: 'documents', icon: 'Aa', color: '#7c7c82', head: '', placeholder: 'Hold F (fn) and talk. Your words appear here.' },
+  mail: { name: 'Mail', title: 'New Message', cat: 'email', icon: '@', color: '#2f7cf6', head: '<div><span>To:</span>Jordan Lee</div><div><span>Subject:</span>The proposal</div>', placeholder: 'Write your email' },
+  slack: { name: 'Slack', title: 'launch-planning', cat: 'work', icon: '#', color: '#6b3fa0', head: '<div><b># launch-planning</b> <span>· 6 members</span></div>', placeholder: 'Message #launch-planning' },
+  messages: { name: 'Messages', title: 'Sam', cat: 'personal', icon: 'Hi', color: '#2fb457', head: '<div><span>To:</span>Sam</div>', placeholder: 'iMessage' },
+};
+const CAT_NAME = { email: 'Email', work: 'Work messages', personal: 'Personal messages', ai: 'AI prompts', documents: 'Documents', other: 'Other' };
+const DEFAULT_STYLE = { email: 'Formal', work: 'Formal', personal: 'Casual', documents: 'Casual', ai: 'Casual', other: 'Casual' };
+
+const CMD_SAMPLE = "hey so the launch is moving to next week because the vendor is running late. we'll send a new date soon!";
+const TF_SAMPLE = "so basically what i'm thinking is we should probably just like go ahead and build the thing and see what happens, and then if it doesn't work we can always, you know, go back and change it, i mean it's not like we have a ton of time anyway so";
+
+const PHRASES = {
+  meet: { label: '"…meet at two, actually three…"',
+    raw: 'Um, so I, I think we should, uh, meet at two, actually three tomorrow and bring the, the report.',
+    clean: { default: 'I think we should meet at 3 tomorrow and bring the report.',
+             email: 'Hi Jordan,\n\nI think we should meet at 3 tomorrow and bring the report.\n\nBest,\nAlex',
+             personal: 'I think we should meet at 3 tomorrow and bring the report' } },
+  coffee: { label: '"coffee at two, actually three"',
+    raw: "Let's grab coffee at two, actually three on Friday.",
+    clean: { default: "Let's grab coffee at 3 on Friday." } },
+  list: { label: '"first, second, third"',
+    raw: 'Okay, so for the trip we need, um, first sunscreen, second a phone charger, and third the passports.',
+    clean: { default: 'For the trip we need:\n1. Sunscreen\n2. A phone charger\n3. The passports' } },
+  followup: { label: '"…did you get a chance to look at the proposal…"',
+    raw: 'Hey Jordan, um, just wanted to check if you got a chance to look at the, the proposal. Let me know if you have any questions. Thanks.',
+    clean: { email: 'Hi Jordan,\n\nJust wanted to check if you got a chance to look at the proposal. Let me know if you have any questions.\n\nThanks,\nAlex',
+             work: 'Hey Jordan, just wanted to check if you got a chance to look at the proposal. Let me know if you have any questions. Thanks.',
+             personal: 'Hey Jordan, just wanted to check if you got a chance to look at the proposal. Let me know if you have any questions. Thanks',
+             default: 'Hey Jordan, just wanted to check if you got a chance to look at the proposal. Let me know if you have any questions. Thanks.' } },
+  notes: { label: 'a longer thought',
+    raw: 'So the plan for this week is, uh, finish the onboarding flow on Monday, then on Tuesday we test it with five users, and, um, by Thursday we should know what to fix before the launch.',
+    clean: { default: 'The plan for this week is to finish the onboarding flow on Monday. On Tuesday we test it with 5 users, and by Thursday we should know what to fix before the launch.' } },
+  formal: { label: '"make this more formal"', raw: 'Make this more formal.', instruction: true,
+    apply: t => t === CMD_SAMPLE ? 'Hello, the launch has been moved to next week because our vendor is running behind schedule. We will share a new date shortly.'
+      : sentences(t).map(s => endPunct(cap(s.replace(/^hey,?\s*(so\s*)?/i, '').replace(/\bwe'll\b/gi, 'we will').replace(/\bit's\b/gi, 'it is').replace(/\bdon't\b/gi, 'do not').replace(/!+$/, '.')))).join(' ') },
+  bullets: { label: '"turn this into bullet points"', raw: 'Turn this into bullet points.', instruction: true,
+    apply: t => t === CMD_SAMPLE ? "- The launch is moving to next week\n- The vendor is running late\n- We'll send a new date soon" : bulletize(t) },
+  spanish: { label: '"translate this to Spanish"', raw: 'Translate this to Spanish.', instruction: true,
+    apply: t => t === CMD_SAMPLE ? 'Hola, el lanzamiento se pasa a la próxima semana porque el proveedor va con retraso. ¡Pronto enviaremos una nueva fecha!' : null },
+  shorter: { label: '"make it shorter"', raw: 'Make it shorter.', instruction: true,
+    apply: t => t === CMD_SAMPLE ? 'The launch moves to next week because of a vendor delay. New date coming soon.'
+      : sentences(t).slice(0, Math.max(1, Math.ceil(sentences(t).length / 2))).join(' ') },
+};
+for (const p of Object.values(PHRASES)) p.words = p.raw.split(/\s+/);
+
+const TRANSFORMS = [
+  { key: '1', name: 'Polish', known: "Let's build it and see what happens. If it doesn't work, we can always go back and change it. We don't have much time anyway.", generic: t => quickClean(t) },
+  { key: '2', name: 'Prompt Engineer', known: "Help me plan how to build a first version quickly and adjust it if it doesn't work.\n\nContext\nTime is limited, so I'd rather build something now and see what happens than plan for long.\n\nRequirements\n- Build a first version now\n- If it doesn't work, go back and change it",
+    generic: t => 'Help me with the following.\n\nContext\n' + t },
+  { key: '3', name: 'Turn into a list', known: "- Build it now and see what happens\n- If it doesn't work, go back and change it\n- We don't have much time anyway", generic: bulletize },
+  { key: '4', name: 'Make it concise', known: "Let's build it, see what happens and change it if needed. We're short on time anyway.",
+    generic: t => sentences(t).slice(0, Math.max(1, Math.ceil(sentences(t).length / 2))).join(' ') },
+  { key: '5', name: 'Fix grammar only', known: "So basically, what I'm thinking is we should probably just, like, go ahead and build the thing and see what happens, and then if it doesn't work, we can always, you know, go back and change it. I mean, it's not like we have a ton of time anyway, so...",
+    generic: t => sentences(t).map(s => endPunct(cap(s))).join(' ') },
+];
+
+// Per-lesson simulator setups.
+const SIMS = {
+  raw: { apps: ['textedit'], phrases: ['meet'], keys: ['fn'] },
+  clean: { apps: ['textedit'], phrases: ['meet', 'coffee', 'list'], keys: ['fn', 'control'], diff: true },
+  context: { apps: ['mail', 'slack', 'messages', 'textedit'], phrases: ['followup'], keys: ['fn', 'control'], ctx: true, diff: true },
+  handsfree: { apps: ['textedit'], phrases: ['notes', 'meet'], keys: ['fn', 'control', 'space', 'esc'] },
+  command: { apps: ['mail'], phrases: ['formal', 'bullets', 'spanish', 'shorter'], keys: ['fn', 'control', 'option', 'esc'], docs: { mail: { text: CMD_SAMPLE, sel: [0, CMD_SAMPLE.length] } }, tools: ['select', 'reset'] },
+  transforms: { apps: ['textedit'], phrases: [], keys: [], docs: { textedit: { text: TF_SAMPLE, sel: [0, TF_SAMPLE.length] } }, tools: ['select', 'reset'], transforms: true },
+  hub: { apps: ['textedit'], phrases: [], keys: ['pasteLast', 'copyLast'] },
+};
+
+const KEY_DEFS = {
+  fn: { label: 'fn', sub: 'hold F', cls: 'fn' },
+  control: { label: 'control', sub: '⌃' },
+  option: { label: 'option', sub: '⌥' },
+  space: { label: 'space', sub: '', cls: 'wide' },
+  esc: { label: 'esc', sub: 'cancel' },
+  pasteLast: { label: '⌘⌃V', sub: 'paste last' },
+  copyLast: { label: '⌘⌃C', sub: 'copy last' },
+};
+
+// ---------- Progress ----------
+const LESSONS = $$('.lesson').map(el => ({ id: el.id, title: el.dataset.title, el, tasks: $$('[data-task]', el).map(t => t.dataset.task) }));
+let done = new Set(store.get('done', []));
+let visited = new Set(store.get('visited', []));
+let active = null;
+const history = [];
+
+function lessonDone(l) { return l.tasks.length ? l.tasks.every(t => done.has(t)) : visited.has(l.id); }
+function complete(taskId) {
+  if (done.has(taskId)) return;
+  done.add(taskId); store.set('done', [...done]);
+  const li = $(`[data-task="${taskId}"]`);
+  if (li) { li.classList.add('done', 'just-done'); li.setAttribute('aria-checked', 'true'); setTimeout(() => li.classList.remove('just-done'), 600); }
+  refreshProgress();
+}
+function refreshProgress() {
+  let count = 0;
+  for (const l of LESSONS) {
+    const d = lessonDone(l); if (d) count++;
+    l.el.classList.toggle('complete', d && l.tasks.length > 0);
+    const link = $(`#lessonList a[href="#${l.id}"]`); if (link) link.parentElement.classList.toggle('done', d);
+  }
+  $$('[data-task]').forEach(li => { const d = done.has(li.dataset.task); li.classList.toggle('done', d); if (li.classList.contains('manual')) li.setAttribute('aria-checked', String(d)); });
+  $('#progressText').textContent = `${count} of ${LESSONS.length}`;
+  $('#progressBar').style.width = (count / LESSONS.length * 100) + '%';
+}
+
+/** Routes simulator events to the active lesson's tasks. */
+function emit(ev) {
+  if (!active) return;
+  const T = {
+    keycheck: ev.type === 'fnDown',
+    'raw-full': ev.type === 'paste' && ev.mode === 'raw' && ev.complete,
+    'raw-tap': ev.type === 'silentTap',
+    'clean-full': ev.type === 'paste' && ev.mode === 'clean' && ev.complete && ev.phrase === 'meet',
+    'clean-backtrack': ev.type === 'paste' && ev.mode === 'clean' && ev.complete && ev.phrase === 'coffee',
+    'clean-list': ev.type === 'paste' && ev.mode === 'clean' && ev.complete && ev.phrase === 'list',
+    'clean-switch': ev.type === 'paste' && ev.mode === 'clean' && ev.switched,
+    'ctx-mail': ev.type === 'paste' && ev.mode === 'clean' && ev.app === 'mail',
+    'ctx-chat': ev.type === 'paste' && ev.mode === 'clean' && (ev.app === 'slack' || ev.app === 'messages'),
+    'style-change': ev.type === 'style',
+    'hf-space': ev.type === 'paste' && ev.handsFree && ev.via === 'space',
+    'hf-double': ev.type === 'paste' && ev.handsFree && ev.via === 'double',
+    'hf-cancel': ev.type === 'cancel',
+    'cmd-one': ev.type === 'command',
+    'cmd-two': ev.type === 'command' && ev.count >= 2,
+    'tf-polish': ev.type === 'transform' && ev.key === '1',
+    'tf-other': ev.type === 'transform' && ev.key !== '1',
+    'dict-add': ev.type === 'dictAdd',
+    'dict-snippet': ev.type === 'snippetUsed',
+    'mt-record': ev.type === 'meetingSummary' && ev.lines >= 2,
+    'mt-lecture': ev.type === 'meetingKind' && ev.kind === 'lecture',
+    'mt-ask': ev.type === 'meetingAsk',
+    'hub-paste': ev.type === 'pasteLast',
+    'hub-cost': ev.type === 'cost',
+  };
+  for (const t of active.tasks) if (T[t]) complete(t);
+}
+
+// ---------- The simulated Mac ----------
+class Sim {
+  constructor() {
+    this.el = document.createElement('div');
+    this.el.className = 'sim';
+    this.el.innerHTML = `
+      <div class="mac">
+        <div class="menubar"><b class="mb-app"></b><span class="mb-items">File&nbsp;&nbsp;Edit&nbsp;&nbsp;View&nbsp;&nbsp;Window</span>
+          <span class="mb-right"><span class="mb-ff" title="FreeFlow">${WAVE_SVG}</span><span>9:41</span></span></div>
+        <div class="desk">
+          <div class="win"><div class="win-bar"><i></i><i></i><i></i><span class="win-title"></span></div>
+            <div class="win-head"></div><div class="field" tabindex="0" role="textbox" aria-readonly="true" aria-label="Simulated text field"></div><div class="win-tools"></div></div>
+          <div class="dock"></div>
+          <div class="pill idle" aria-hidden="true"></div>
+        </div>
+      </div>
+      <div class="sim-ctl">
+        <div class="ctx-line"></div>
+        <div class="say"></div>
+        <div class="tfbar"></div>
+        <div class="keys"></div>
+        <div class="hint" aria-live="polite"></div>
+        <div class="diff" hidden></div>
+      </div>`;
+    this.q = s => this.el.querySelector(s);
+    this.state = 'idle'; this.gen = 0; this.cmdCount = 0;
+    this.latch = { control: false, option: false };
+    this.held = { control: false, option: false };
+    this.lessonState = {};
+    this.lastPasted = null; this.lastDictationAt = 0;
+    this.q('.field').addEventListener('click', () => this.toggleSelect());
+  }
+
+  mount(slot, lessonId) {
+    this.cancel(true);
+    this.cfg = SIMS[lessonId]; this.lessonId = lessonId;
+    if (!this.lessonState[lessonId]) {
+      const docs = {};
+      for (const a of this.cfg.apps) docs[a] = Object.assign({ text: '', sel: null }, structuredCloneSafe((this.cfg.docs || {})[a]));
+      this.lessonState[lessonId] = { app: this.cfg.apps[0], phrase: this.cfg.phrases[0] || null, docs };
+    }
+    this.ls = this.lessonState[lessonId];
+    slot.appendChild(this.el);
+    this.q('.diff').hidden = true;
+    this.renderAll();
+  }
+  get doc() { return this.ls.docs[this.ls.app]; }
+  get app() { return APPS[this.ls.app]; }
+  get phrase() { return this.ls.phrase ? PHRASES[this.ls.phrase] : null; }
+
+  // --- Rendering ---
+  renderAll() { this.renderWindow(); this.renderDock(); this.renderChips(); this.renderKeys(); this.renderTools(); this.renderTf(); this.renderPill(); this.renderHint(); this.renderCtx(); }
+  renderWindow() {
+    const a = this.app;
+    this.q('.mb-app').textContent = a.name;
+    this.q('.win-title').textContent = a.title;
+    this.q('.win-head').innerHTML = a.head;
+    this.renderField();
+  }
+  renderField(freshRange) {
+    const d = this.doc, f = this.q('.field');
+    if (!d.text) { f.innerHTML = `<span class="caret"></span><span class="ph">${esc(this.app.placeholder)}</span>`; return; }
+    if (d.sel) {
+      const [s, e] = d.sel;
+      f.innerHTML = esc(d.text.slice(0, s)) + '<mark>' + esc(d.text.slice(s, e)) + '</mark>' + esc(d.text.slice(e));
+    } else if (freshRange) {
+      const [s, e] = freshRange;
+      f.innerHTML = esc(d.text.slice(0, s)) + '<span class="fresh">' + esc(d.text.slice(s, e)) + '</span>' + esc(d.text.slice(e)) + '<span class="caret"></span>';
+      const fr = f.querySelector('.fresh');
+      setTimeout(() => fr && (fr.style.background = 'transparent'), 900);
+    } else {
+      f.innerHTML = esc(d.text) + '<span class="caret"></span>';
+    }
+    f.scrollTop = f.scrollHeight;
+  }
+  renderDock() {
+    const dock = this.q('.dock');
+    if (this.cfg.apps.length < 2) { dock.innerHTML = ''; this.q('.pill').classList.add('nodock'); return; }
+    this.q('.pill').classList.remove('nodock');
+    dock.innerHTML = this.cfg.apps.map(id => `<button type="button" data-app="${id}" style="background:${APPS[id].color}" aria-pressed="${id === this.ls.app}" aria-label="Switch to ${APPS[id].name}">${esc(APPS[id].icon)}<span>${APPS[id].name}</span></button>`).join('');
+    dock.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+      if (this.state === 'recording') return;
+      this.ls.app = b.dataset.app; this.renderWindow(); this.renderDock(); this.renderCtx();
+    }));
+  }
+  renderCtx() {
+    const c = this.q('.ctx-line');
+    if (!this.cfg.ctx) { c.innerHTML = ''; return; }
+    const cat = this.app.cat;
+    c.innerHTML = `FreeFlow sees <b>${this.app.name}</b> → category <b>${CAT_NAME[cat]}</b> → <b>${DEFAULT_STYLE[cat]}</b> style${this.doc.text ? '' : ', empty field'}`;
+  }
+  renderChips() {
+    const say = this.q('.say');
+    if (!this.cfg.phrases.length) { say.innerHTML = ''; return; }
+    say.innerHTML = `<div class="chips"><span class="row-lbl">You'll say</span>${this.cfg.phrases.map(id => `<button type="button" class="chip" data-p="${id}" aria-pressed="${id === this.ls.phrase}">${esc(PHRASES[id].label)}</button>`).join('')}</div>`;
+    say.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => {
+      if (this.state === 'recording') return;
+      this.ls.phrase = b.dataset.p; this.renderChips();
+    }));
+  }
+  renderKeys() {
+    const k = this.q('.keys');
+    k.innerHTML = this.cfg.keys.map(id => `<button type="button" class="key ${KEY_DEFS[id].cls || ''}" data-key="${id}" aria-label="${id}">${KEY_DEFS[id].label}<small>${KEY_DEFS[id].sub}</small></button>`).join('');
+    k.querySelectorAll('.key').forEach(b => bindKeyButton(b, b.dataset.key, this));
+    this.paintKeys();
+  }
+  paintKeys() {
+    this.q('.keys').querySelectorAll('.key').forEach(b => {
+      const id = b.dataset.key;
+      const on = id === 'fn' ? keyState.fn : (id === 'control' || id === 'option') ? (this.held[id] || this.latch[id]) : false;
+      b.classList.toggle('down', !!on);
+    });
+  }
+  renderTools() {
+    const t = this.q('.win-tools');
+    const tools = this.cfg.tools || [];
+    t.innerHTML = tools.map(x => x === 'select' ? '<button type="button" class="btn small" data-t="select">Select all</button>' : '<button type="button" class="btn small" data-t="reset">Reset text</button>').join('');
+    t.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+      if (this.state !== 'idle') return;
+      if (b.dataset.t === 'select') { this.doc.sel = this.doc.text ? [0, this.doc.text.length] : null; }
+      else { const init = (this.cfg.docs || {})[this.ls.app]; Object.assign(this.doc, { text: init.text, sel: [0, init.text.length] }); }
+      this.renderField();
+    }));
+  }
+  renderTf() {
+    const t = this.q('.tfbar');
+    if (!this.cfg.transforms) { t.innerHTML = ''; return; }
+    t.innerHTML = TRANSFORMS.map(x => `<button type="button" class="chip" data-k="${x.key}"><kbd>⌥${x.key}</kbd> ${x.name}</button>`).join('');
+    t.querySelectorAll('button').forEach(b => b.addEventListener('click', () => this.transform(b.dataset.k)));
+  }
+  renderPill(flash) {
+    const p = this.q('.pill'), mb = this.q('.mb-ff');
+    mb.classList.toggle('rec', this.state === 'recording');
+    p.className = 'pill' + (this.cfg.apps.length < 2 ? ' nodock' : '');
+    if (flash) { p.classList.add(flash.ok ? 'ok' : 'err'); p.innerHTML = esc(flash.text); return; }
+    if (this.state === 'idle') { p.classList.add('idle'); p.innerHTML = ''; return; }
+    if (this.state === 'processing') { p.innerHTML = `<span class="spin"></span>${esc(this.procLabel || '')}`; return; }
+    const modeName = { raw: 'Raw', clean: 'Clean up', command: 'Command' }[this.mode];
+    const all = this.phrase && this.heard >= this.phrase.words.length;
+    const live = this.words.slice(-7).join(' ');
+    p.innerHTML = `<span class="mode ${this.mode}">${modeName}</span><span class="wave ${all || !this.words.length ? 'quiet' : ''}">${'<i></i>'.repeat(7)}</span>${live ? `<span class="live"><bdi>${esc(live)}</bdi></span>` : ''}${this.handsFree ? '<span class="hf">hands-free</span>' : ''}`;
+  }
+  renderHint() {
+    const h = this.q('.hint');
+    const L = this.lessonId;
+    if (L === 'transforms') { h.innerHTML = 'Press <b>option + 1</b> to <b>5</b>, or click a Transform above.'; return; }
+    if (L === 'hub') { h.innerHTML = 'Press <b>⌘ + control + V</b> or click the on-screen key.'; return; }
+    if (this.state === 'processing') { h.innerHTML = this.mode === 'raw' ? 'Pasting…' : 'Claude is working on it…'; return; }
+    if (this.state === 'recording') {
+      const all = this.phrase && this.heard >= this.phrase.words.length;
+      if (this.handsFree) h.innerHTML = `Hands-free: you can let go. ${all ? '<b>Tap F (fn) to finish.</b>' : 'Listening…'} <b>esc</b> cancels.`;
+      else h.innerHTML = all ? '<b>Let go of F</b> to paste.' : 'Listening… keep holding until the sentence finishes.' + (this.mode === 'raw' && this.cfg.keys.includes('control') ? ' Tap <b>control</b> to switch to cleanup.' : '');
+      return;
+    }
+    const pre = { raw: 'Hold <b>F</b> (fn) to talk.', clean: 'Hold <b>control</b>, then hold <b>F</b>. Or click the on-screen control key, then hold fn.', context: 'Hold <b>control</b> + <b>F</b>. Switch apps in the Dock.', handsfree: 'Hold <b>F</b> and press <b>space</b>, or double-tap <b>F</b>.', command: 'Select the text, then hold <b>option</b> + <b>F</b>.' };
+    h.innerHTML = pre[L] || '';
+  }
+  flash(text, ok = true) { this.renderPill({ text, ok }); clearTimeout(this.flashT); this.flashT = setTimeout(() => { if (this.state === 'idle') this.renderPill(); }, 1300); }
+
+  toggleSelect() {
+    if (this.state !== 'idle' || !this.cfg.tools) return;
+    const d = this.doc;
+    d.sel = d.sel || !d.text ? null : [0, d.text.length];
+    this.renderField();
+  }
+
+  // --- Hotkey state machine (mirrors DictationController) ---
+  fnDown() {
+    const ctrl = this.held.control || this.latch.control, opt = this.held.option || this.latch.option;
+    const mode = opt && this.cfg.keys.includes('option') ? 'command' : (ctrl && this.cfg.keys.includes('control') ? 'clean' : 'raw');
+    if (!this.cfg.keys.includes('fn')) return;
+    const t = now();
+    if (this.state !== 'recording' && this.lastShortTapEnded && t - this.lastShortTapEnded < 700) {
+      this.lastShortTapEnded = null; this.gen++; this.state = 'idle';
+      this.begin(mode, true, 'double'); return;
+    }
+    if (this.state === 'idle') { this.fnDownAt = t; this.begin(mode, false, null); }
+    else if (this.state === 'recording') {
+      if (this.handsFree) this.finish();
+      else if (this.pending) { clearTimeout(this.pending); this.pending = null; this.handsFree = true; this.via = 'double'; this.stream(0); this.renderPill(); this.renderHint(); }
+    }
+  }
+  fnUp() {
+    if (this.state !== 'recording' || this.handsFree) return;
+    const held = now() - this.fnDownAt;
+    // Letting go means you stopped talking; a quick second tap (double-tap) picks the speech back up.
+    if (held < 600) { clearTimeout(this.streamT); this.lastShortTapEnded = now(); this.pending = setTimeout(() => { this.pending = null; this.finish(); }, 450); }
+    else this.finish();
+  }
+  modifier(which) {
+    if (this.state !== 'recording') return false;
+    if (which === 'control' && this.cfg.keys.includes('control') && this.mode !== 'clean') { if (this.mode === 'raw') this.switched = true; this.mode = 'clean'; }
+    else if (which === 'option' && this.cfg.keys.includes('option') && this.mode !== 'command') { this.mode = 'command'; }
+    else return true;
+    this.renderPill(); this.renderHint(); return true;
+  }
+  space() {
+    if (this.state !== 'recording' || !this.cfg.keys.includes('space')) return;
+    if (this.handsFree) { this.finish(); return; }
+    clearTimeout(this.pending); this.pending = null; this.handsFree = true; this.via = 'space';
+    this.renderPill(); this.renderHint();
+  }
+  begin(mode, handsFree, via) {
+    this.state = 'recording'; this.mode = mode; this.handsFree = handsFree; this.via = via; this.switched = false;
+    this.words = []; this.heard = 0; this.startAt = now();
+    clearTimeout(this.flashT);
+    this.stream(350);
+    this.renderPill(); this.renderHint();
+  }
+  /** Plays the scripted "speech" one word at a time into the live transcript. */
+  stream(delay) {
+    clearTimeout(this.streamT);
+    const p = this.phrase;
+    const tick = () => {
+      if (this.state !== 'recording' || !p || this.heard >= p.words.length) { this.renderPill(); this.renderHint(); return; }
+      this.words.push(p.words[this.heard++]); this.renderPill(); this.renderHint();
+      this.streamT = setTimeout(tick, 165);
+    };
+    this.streamT = setTimeout(tick, delay);
+  }
+  cancel(silent) {
+    clearTimeout(this.pending); this.pending = null; clearTimeout(this.streamT);
+    if (this.state === 'idle') return;
+    this.state = 'idle'; this.gen++;
+    this.latch.control = this.latch.option = false;
+    if (!silent) { this.flash('Cancelled', false); this.renderHint(); this.paintKeys(); emit({ type: 'cancel' }); }
+  }
+  finish() {
+    clearTimeout(this.pending); this.pending = null; clearTimeout(this.streamT);
+    if (this.state !== 'recording') return;
+    const dur = now() - this.startAt, p = this.phrase;
+    const complete = !!p && this.heard >= p.words.length;
+    const heardText = this.words.join(' ');
+    const mode = this.mode, meta = { handsFree: this.handsFree, via: this.via, switched: this.switched };
+    this.latch.control = this.latch.option = false; this.paintKeys();
+    if (!this.words.length) {
+      this.state = 'idle';
+      if (dur < 800) { this.renderPill(); this.renderHint(); emit({ type: 'silentTap' }); }
+      else { this.flash('No speech detected', false); this.renderHint(); }
+      return;
+    }
+    this.state = 'processing';
+    this.procLabel = mode === 'raw' ? '' : mode === 'clean' ? 'Cleaning up…' : 'Working on it…';
+    const gen = ++this.gen;
+    this.renderPill(); this.renderHint();
+    setTimeout(() => { if (gen === this.gen) this.deliver(mode, p, complete, heardText, meta); }, mode === 'raw' ? 250 : mode === 'clean' ? 950 : 1150);
+  }
+  deliver(mode, p, complete, heardText, meta) {
+    this.state = 'idle';
+    const d = this.doc, cat = this.app.cat;
+    if (mode === 'command') {
+      const target = d.sel ? d.text.slice(d.sel[0], d.sel[1]) : d.text;
+      const out = p && p.instruction && complete && target ? p.apply(target) : undefined;
+      if (out === undefined) { this.flash(target ? 'Nothing to change' : 'Select some text first', false); this.renderHint(); return; }
+      if (out === null) { this.flash('Demo: click Reset text to try this one', false); this.renderHint(); return; }
+      this.insert(out, true);
+      this.cmdCount++;
+      this.record('Command', `${p.raw} → ${out}`);
+      this.flash('✓ Done'); this.renderHint();
+      emit({ type: 'command', count: this.cmdCount });
+      return;
+    }
+    let out;
+    if (mode === 'raw') out = complete ? p.raw : heardText;
+    else {
+      const key = cat === 'email' && d.text.trim() ? 'default' : cat;
+      out = complete ? (p.clean[key] || p.clean.default) : quickClean(heardText);
+    }
+    this.insert(out, false);
+    this.record(mode === 'raw' ? 'Raw' : 'Clean up', out);
+    this.flash('✓ Pasted'); this.renderHint(); this.renderCtx();
+    const diffEl = this.q('.diff');
+    if (this.cfg.diff && mode === 'clean') {
+      const df = wordDiff(complete ? p.raw : heardText, out);
+      diffEl.innerHTML = `<span class="lbl">What you said</span><p>${df.a}</p><span class="lbl">What Claude pasted</span><p>${df.b}</p>`;
+      diffEl.hidden = false;
+    }
+    emit(Object.assign({ type: 'paste', mode, complete, phrase: this.ls.phrase, app: this.ls.app }, meta));
+  }
+  /** Pastes like TextInserter: replaces the selection, or appends with sensible spacing. */
+  insert(text, replaceAllIfNoSel) {
+    const d = this.doc; let start;
+    if (d.sel) { start = d.sel[0]; d.text = d.text.slice(0, d.sel[0]) + text + d.text.slice(d.sel[1]); d.sel = null; }
+    else if (replaceAllIfNoSel) { start = 0; d.text = text; }
+    else {
+      const before = d.text;
+      const sep = !before ? '' : text.includes('\n') ? '\n\n' : /\s$/.test(before) ? '' : ' ';
+      start = before.length + sep.length; d.text = before + sep + text;
+    }
+    this.lastPasted = text; this.lastDictationAt = Date.now();
+    this.renderField([start, start + text.length]);
+  }
+  record(mode, text) { history.unshift({ at: new Date(), app: this.app.name, mode, text }); renderHistory(); }
+
+  transform(k) {
+    if (!this.cfg.transforms || this.state !== 'idle') return;
+    const tf = TRANSFORMS.find(x => x.key === k); if (!tf) return;
+    const d = this.doc;
+    let input = d.sel ? d.text.slice(d.sel[0], d.sel[1]) : d.text;
+    if (!input.trim() && this.lastPasted && Date.now() - this.lastDictationAt < 60000) input = this.lastPasted;
+    if (!input.trim()) { this.flash('Select some text first', false); return; }
+    this.state = 'processing'; this.mode = 'clean'; this.procLabel = tf.name + '…'; this.renderPill();
+    const gen = ++this.gen;
+    setTimeout(() => {
+      if (gen !== this.gen) return;
+      this.state = 'idle';
+      const out = input === TF_SAMPLE ? tf.known : tf.generic(input);
+      if (!d.sel) d.sel = [0, d.text.length];
+      this.insert(out, true);
+      this.record(tf.name, out);
+      this.flash('✓ ' + tf.name);
+      emit({ type: 'transform', key: k });
+    }, 900);
+  }
+  pasteLast() {
+    if (this.state !== 'idle') return;
+    const t = this.lastPasted || 'I think we should meet at 3 tomorrow and bring the report.';
+    this.insert(t, false); this.flash('✓ Pasted last transcript'); emit({ type: 'pasteLast' });
+  }
+  copyLast() {
+    const t = this.lastPasted || 'I think we should meet at 3 tomorrow and bring the report.';
+    try { navigator.clipboard && navigator.clipboard.writeText(t).catch(() => {}); } catch (e) {}
+    this.flash('✓ Copied last transcript');
+  }
+}
+function structuredCloneSafe(o) { return o ? JSON.parse(JSON.stringify(o)) : {}; }
+
+// ---------- Keyboard + on-screen keys ----------
+const keyState = { fn: false };
+let fnSource = null;
+let ctrlTap = null;
+function target() { return active && ({ welcome: 'keycheck', meetings: 'meeting' }[active.id] || (SIMS[active.id] ? 'sim' : null)); }
+function onFnDown(src) {
+  if (keyState.fn) return;
+  keyState.fn = true; fnSource = src;
+  emit({ type: 'fnDown' });
+  paintKeycheck();
+  if (target() === 'sim') { sim.paintKeys(); sim.fnDown(); }
+}
+function onFnUp(src) {
+  if (!keyState.fn || (src && fnSource && src !== fnSource)) return;
+  keyState.fn = false; fnSource = null;
+  paintKeycheck();
+  if (target() === 'sim') { sim.paintKeys(); sim.fnUp(); }
+}
+function bindKeyButton(b, id, owner) {
+  if (id === 'fn') {
+    b.addEventListener('pointerdown', e => { e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch (_) {} onFnDown('pointer'); });
+    const up = () => onFnUp('pointer');
+    b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
+    b.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) { e.preventDefault(); e.stopPropagation(); onFnDown('kbd-btn'); } });
+    b.addEventListener('keyup', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); onFnUp('kbd-btn'); } });
+    return;
+  }
+  b.addEventListener('click', () => {
+    if (owner === 'keycheck') { flashKey(b); return; }
+    const s = owner;
+    if (id === 'control' || id === 'option') {
+      if (!s.modifier(id)) { s.latch[id] = !s.latch[id]; s.paintKeys(); }
+      else if (s.state === 'recording') flashKey(b);
+    } else if (id === 'space') s.space();
+    else if (id === 'esc') s.cancel();
+    else if (id === 'pasteLast') s.pasteLast();
+    else if (id === 'copyLast') s.copyLast();
+  });
+}
+function flashKey(b) { b.classList.add('down'); setTimeout(() => b.classList.remove('down'), 160); }
+function typingInForm(e) { const t = e.target; return t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable); }
+
+document.addEventListener('keydown', e => {
+  if (typingInForm(e)) return;
+  const tg = target(); if (!tg) return;
+  if (e.key === 'Control') { ctrlTap = e.altKey || e.shiftKey || e.metaKey ? null : now(); } else ctrlTap = null;
+  const isFn = (e.code === 'KeyF' && !e.metaKey) || e.key === 'Fn';
+  if (isFn) { e.preventDefault(); if (!e.repeat) onFnDown('key'); return; }
+  if (tg === 'keycheck') {
+    const map = { Control: 'control', Alt: 'option', ' ': 'space', Escape: 'esc' };
+    const id = map[e.key]; if (id) { if (id === 'space') e.preventDefault(); const b = $(`#keycheck [data-key="${id}"]`); b && b.classList.add('down'); }
+    return;
+  }
+  if (tg === 'meeting') {
+    if (e.altKey && e.code === 'KeyN') { e.preventDefault(); meeting.toggle(); }
+    return;
+  }
+  // tg === 'sim'
+  if (e.key === 'Control' && !e.repeat) { sim.held.control = true; sim.modifier('control'); sim.paintKeys(); return; }
+  if (e.key === 'Alt' && !e.repeat) { sim.held.option = true; sim.modifier('option'); sim.paintKeys(); return; }
+  if (e.code === 'Space' && keyState.fn) { e.preventDefault(); sim.space(); return; }
+  if (e.code === 'Space' && sim.state === 'recording') { e.preventDefault(); return; }
+  if (e.key === 'Escape') { if (sim.state === 'recording') { e.preventDefault(); sim.cancel(); } return; }
+  if (e.altKey && /^Digit[1-5]$/.test(e.code)) { e.preventDefault(); sim.transform(e.code.slice(5)); return; }
+  if (e.metaKey && e.ctrlKey && e.code === 'KeyV' && sim.cfg.keys.includes('pasteLast')) { e.preventDefault(); sim.pasteLast(); return; }
+  if (e.metaKey && e.ctrlKey && e.code === 'KeyC' && sim.cfg.keys.includes('copyLast')) { e.preventDefault(); sim.copyLast(); return; }
+});
+document.addEventListener('keyup', e => {
+  const isFn = (e.code === 'KeyF') || e.key === 'Fn';
+  if (isFn) { onFnUp('key'); }
+  if (e.key === 'Control') {
+    if (ctrlTap && now() - ctrlTap < 500 && target() === 'meeting') meeting.controlTap();
+    ctrlTap = null;
+  }
+  if (typingInForm(e)) return;
+  const tg = target();
+  if (tg === 'keycheck') {
+    const map = { Control: 'control', Alt: 'option', ' ': 'space', Escape: 'esc' };
+    const id = map[e.key]; if (id) { const b = $(`#keycheck [data-key="${id}"]`); b && b.classList.remove('down'); }
+  }
+  if (tg === 'sim') {
+    if (e.key === 'Control') { sim.held.control = false; sim.paintKeys(); }
+    if (e.key === 'Alt') { sim.held.option = false; sim.paintKeys(); }
+  }
+});
+window.addEventListener('blur', () => { if (keyState.fn) onFnUp(); if (window.sim) { sim.held.control = sim.held.option = false; sim.paintKeys(); } });
+
+// Key check (welcome)
+function renderKeycheck() {
+  const el = $('#keycheck');
+  el.innerHTML = ['fn', 'control', 'option', 'space', 'esc'].map(id => `<button type="button" class="key ${KEY_DEFS[id].cls || ''}" data-key="${id}">${KEY_DEFS[id].label}<small>${KEY_DEFS[id].sub}</small></button>`).join('');
+  el.querySelectorAll('.key').forEach(b => bindKeyButton(b, b.dataset.key, 'keycheck'));
+}
+function paintKeycheck() { const b = $('#keycheck [data-key="fn"]'); if (b) b.classList.toggle('down', keyState.fn); }
+
+// ---------- Styles widget ----------
+const STYLE_SAMPLES = { formal: 'Sounds good. See you at 3 tomorrow.', casual: 'Sounds good, see you at 3 tomorrow', veryCasual: 'sounds good see you at 3 tomorrow', excited: 'Sounds good! See you at 3 tomorrow!' };
+const STYLE_NAMES = { formal: 'Formal', casual: 'Casual', veryCasual: 'Very casual', excited: 'Excited!' };
+const STYLE_ROWS = [
+  { id: 'email', name: 'Email', apps: 'Mail, Outlook, Gmail', options: ['formal', 'casual', 'excited'], def: 'formal' },
+  { id: 'work', name: 'Work messages', apps: 'Slack, Teams, Discord', options: ['formal', 'casual', 'excited'], def: 'formal' },
+  { id: 'personal', name: 'Personal messages', apps: 'Messages, WhatsApp', options: ['formal', 'casual', 'veryCasual'], def: 'casual' },
+  { id: 'other', name: 'Everything else', apps: 'AI prompts, documents, other apps', options: ['formal', 'casual', 'excited'], def: 'casual' },
+];
+function renderStyles() {
+  const el = $('#styleRows'); const chosen = store.get('styles', {});
+  el.innerHTML = STYLE_ROWS.map(r => {
+    const cur = chosen[r.id] || r.def;
+    return `<div class="style-row" data-row="${r.id}"><div><b>${r.name}</b><div class="apps">${r.apps}</div></div>
+      <div class="seg">${r.options.map(o => `<button type="button" data-s="${o}" aria-pressed="${o === cur}">${STYLE_NAMES[o]}</button>`).join('')}</div>
+      <div class="preview">${esc(STYLE_SAMPLES[cur])}</div></div>`;
+  }).join('');
+  el.querySelectorAll('.seg button').forEach(b => b.addEventListener('click', () => {
+    const row = b.closest('.style-row').dataset.row; const c = store.get('styles', {}); c[row] = b.dataset.s; store.set('styles', c);
+    renderStyles(); emit({ type: 'style' });
+  }));
+}
+
+// ---------- Dictionary widget (same matching rules as TextProcessor.applyDictionary) ----------
+let dictEntries = store.get('dict', [
+  { phrase: 'north wind', replacement: 'Northwind', snippet: false, mine: false },
+  { phrase: 'Jordan Lee', replacement: '', snippet: false, mine: false },
+  { phrase: 'my address', replacement: '123 Example Street, Springfield', snippet: true, mine: false },
+]);
+const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+function applyDictionary(input) {
+  const marks = [];
+  let text = input;
+  const list = dictEntries.filter(e => e.phrase.trim().length >= 2).sort((a, b) => b.phrase.length - a.phrase.length);
+  for (const e of list) {
+    const phrase = e.phrase.trim();
+    const rep = e.replacement ? e.replacement : phrase;
+    if (rep === phrase && !e.snippet && phrase.toLowerCase() === phrase) continue;
+    const re = new RegExp('(?<![\\p{L}\\p{N}])' + reEsc(phrase) + '(?![\\p{L}\\p{N}])', 'giu');
+    text = text.replace(re, m => { if (m === rep) return m; marks.push(e); return '\u0001' + rep + '\u0002'; });
+  }
+  return { html: esc(text).replace(/\u0001/g, '<span class="rep">').replace(/\u0002/g, '</span>'), used: marks };
+}
+function renderDict() {
+  const el = $('#dict');
+  el.innerHTML = `
+    <div class="table-wrap"><table><tr><th>When FreeFlow hears</th><th>It writes</th><th>Type</th><th></th></tr>
+      ${dictEntries.map((e, i) => `<tr><td>${esc(e.phrase)}</td><td>${e.replacement ? esc(e.replacement) : '<span style="color:var(--muted)">(this spelling)</span>'}</td>
+        <td><span class="tag ${e.snippet ? 'snippet' : ''}">${e.snippet ? 'Snippet' : e.replacement ? 'Replacement' : 'Word'}</span></td>
+        <td><button type="button" class="x" data-del="${i}" aria-label="Remove ${esc(e.phrase)}">×</button></td></tr>`).join('')}
+    </table></div>
+    <form class="form-row" id="dictForm">
+      <select id="dType" aria-label="Entry type"><option value="word">Word</option><option value="replacement">Replacement</option><option value="snippet">Snippet</option></select>
+      <input type="text" id="dPhrase" placeholder="Word, or what you say" aria-label="Word or spoken phrase" required>
+      <input type="text" id="dRep" placeholder="Write this instead" aria-label="Replacement text" hidden>
+      <button class="btn small primary" type="submit">Add</button>
+    </form>
+    <label class="row-lbl" for="dTest">Test box: type what you'd say</label>
+    <input type="text" id="dTest" value="${esc(store.get('dictTest', 'send the north wind deck to jordan lee and add my address'))}">
+    <div class="out" id="dOut" aria-live="polite"></div>`;
+  const type = $('#dType'), rep = $('#dRep');
+  const syncType = () => { rep.hidden = type.value === 'word'; rep.required = type.value !== 'word'; rep.placeholder = type.value === 'snippet' ? 'The longer text to insert' : 'Write this instead'; $('#dPhrase').placeholder = type.value === 'word' ? 'A word, spelled your way' : 'What you say'; };
+  type.addEventListener('change', syncType); syncType();
+  $('#dictForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const phrase = $('#dPhrase').value.trim(); if (!phrase) return;
+    const entry = { phrase, replacement: type.value === 'word' ? '' : rep.value.trim(), snippet: type.value === 'snippet', mine: true };
+    if (type.value !== 'word' && !entry.replacement) return;
+    dictEntries.push(entry); store.set('dict', dictEntries);
+    const t = type.value; renderDict(); $('#dType').value = t; $('#dType').dispatchEvent(new Event('change'));
+    emit({ type: 'dictAdd' }); $('#dPhrase').focus();
+  });
+  el.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => { dictEntries.splice(+b.dataset.del, 1); store.set('dict', dictEntries); renderDict(); }));
+  const test = $('#dTest');
+  const run = () => {
+    store.set('dictTest', test.value);
+    const r = applyDictionary(test.value); $('#dOut').innerHTML = r.html || '&nbsp;';
+    if (r.used.some(e => e.snippet && e.mine)) emit({ type: 'snippetUsed' });
+  };
+  test.addEventListener('input', run); run();
+}
+
+// ---------- Meetings widget ----------
+const SCRIPT = [
+  ['them', "Thanks for joining. So the main thing today is the launch date."],
+  ['me', "Right. I think we're still on track for the fourteenth, as long as the vendor ships on time."],
+  ['them', 'They told me Monday at the latest.'],
+  ['me', "Okay. Then let's keep the fourteenth and plan a backup for the twenty-first."],
+  ['them', 'Sounds good. Can you update the slides before Friday?'],
+  ['me', "Yes, I'll have them done by Thursday. Can you send the vendor the final specs?"],
+  ['them', "I'll send them today."],
+  ['me', "Great. Let's check in again on Monday."],
+];
+class Meeting {
+  constructor(el) {
+    this.el = el; this.rec = false; this.kind = 'meeting'; this.lines = []; this.status = 'idle';
+    el.innerHTML = `<div class="meet">
+      <div class="meet-head"><span class="title">Meetings</span><span class="badge" id="mKind">Meeting</span><span class="timer" id="mTimer">00:00</span>
+        <button class="btn small" type="button" id="mCtrl" title="Tap control on its own">control tap</button>
+        <button class="btn small primary" type="button" id="mBtn">Start recording ⌥N</button></div>
+      <div class="meet-body"><div class="transcript" id="mTr" aria-live="polite"></div>
+        <div class="meet-side"><label class="row-lbl" for="mNotes">My notes (optional)</label>
+          <textarea id="mNotes" rows="6" placeholder="Type thoughts during the meeting. They're included in the summary."></textarea></div></div>
+      <div class="summary" id="mSum"></div>
+      <div class="ask" id="mAsk" hidden><div class="chips"><span class="row-lbl">Ask</span>
+        <button type="button" class="chip" data-q="0">What did we decide?</button><button type="button" class="chip" data-q="1">What do I need to do?</button><button type="button" class="chip" data-q="2">When do we talk next?</button></div>
+        <div class="answer" id="mAns"></div></div></div>`;
+    $('#mBtn').addEventListener('click', () => this.toggle());
+    $('#mCtrl').addEventListener('click', () => this.controlTap());
+    el.querySelectorAll('[data-q]').forEach(b => b.addEventListener('click', () => this.ask(+b.dataset.q)));
+    this.render();
+  }
+  who(s) { return this.kind === 'lecture' ? (s === 'me' ? 'Room' : 'Online') : (s === 'me' ? 'Me' : 'Them'); }
+  toggle() { this.rec ? this.stop() : this.start(); }
+  start() {
+    if (this.status === 'processing') return;
+    this.rec = true; this.status = 'rec'; this.kind = 'meeting'; this.lines = []; this.live = null; this.idx = 0; this.t0 = Date.now();
+    $('#mSum').innerHTML = ''; $('#mAsk').hidden = true; $('#mAns').innerHTML = '';
+    this.timer = setInterval(() => this.renderTimer(), 1000);
+    this.nextLine(); this.render(); emit({ type: 'meetingStart' });
+  }
+  nextLine() {
+    if (!this.rec || this.idx >= SCRIPT.length) { this.live = null; this.render(); return; }
+    const [who, text] = SCRIPT[this.idx++]; const words = text.split(' ');
+    this.live = { who, words: [] }; let i = 0;
+    const tick = () => {
+      if (!this.rec) return;
+      if (i < words.length) { this.live.words.push(words[i++]); this.renderTranscript(); this.lt = setTimeout(tick, 140); }
+      else { this.lines.push({ who, text }); this.live = null; this.renderTranscript(); this.lt = setTimeout(() => this.nextLine(), 600); }
+    };
+    this.lt = setTimeout(tick, 500);
+  }
+  controlTap() { if (!this.rec) return; this.kind = this.kind === 'meeting' ? 'lecture' : 'meeting'; this.render(); emit({ type: 'meetingKind', kind: this.kind }); }
+  stop() {
+    this.rec = false; clearTimeout(this.lt); clearInterval(this.timer);
+    if (this.live && this.live.words.length) this.lines.push({ who: this.live.who, text: this.live.words.join(' ') });
+    this.live = null; this.status = 'processing'; this.render();
+    $('#mSum').innerHTML = '<p><span class="spin" style="display:inline-block;vertical-align:middle;border-color:var(--line);border-top-color:var(--accent)"></span> Claude is writing your ' + (this.kind === 'lecture' ? 'study notes' : 'summary') + '…</p>';
+    setTimeout(() => this.summarize(), 1600);
+  }
+  summarize() {
+    this.status = 'done'; this.render();
+    const notes = $('#mNotes').value.trim();
+    const n = this.lines.length;
+    let html;
+    if (!n) html = '<p><i>No speech was captured in this meeting.</i></p>';
+    else if (this.kind === 'lecture') html = `<h3>Launch Planning: Dates and Dependencies</h3>
+      <p>A short session on setting a launch date that depends on an outside vendor, and planning a fallback.</p>
+      <h3>Key points</h3><ul><li>The launch stays on the 14th only if the vendor ships by Monday.</li><li>A backup date (the 21st) protects the plan if the vendor slips.</li><li>Slides and final specs are the two open dependencies.</li></ul>
+      <h3>Review questions</h3><ul><li>Why plan a backup date instead of moving the launch now?</li><li>Which two tasks must finish before the launch can go ahead?</li></ul>`;
+    else html = `<h3>Launch Date Check-in</h3>
+      <p>You and the vendor contact confirmed the launch plan. It stays on the 14th, with the 21st as a backup if the vendor is late.</p>
+      <h3>Decisions</h3><ul><li>Keep the launch on the 14th.</li><li>Use the 21st as the backup date.</li></ul>
+      <h3>Action items</h3><ul><li class="todo">Update the slides by Thursday (you)</li><li class="todo">Send the vendor the final specs today (them)</li><li class="todo">Check in again on Monday (both)</li></ul>`;
+    if (n && notes) html += `<h3>Your notes</h3><p>${esc(notes)}</p>`;
+    if (n && n < SCRIPT.length) html += `<p style="color:var(--muted);font-size:.85rem">Stopped early: ${n} of ${SCRIPT.length} lines were captured. In the real app the summary only covers what was said.</p>`;
+    $('#mSum').innerHTML = html; $('#mAsk').hidden = !n;
+    emit({ type: 'meetingSummary', kind: this.kind, lines: n });
+  }
+  ask(i) {
+    const A = ['You decided to keep the launch on the 14th, with the 21st as a backup if the vendor ships late.',
+      "You said you'd update the slides by Thursday.", 'You agreed to check in again on Monday.'];
+    $('#mAns').textContent = A[i]; emit({ type: 'meetingAsk' });
+  }
+  renderTimer() { const s = this.t0 ? Math.floor((Date.now() - this.t0) / 1000) : 0; $('#mTimer').textContent = String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }
+  renderTranscript() {
+    const tr = $('#mTr');
+    const rows = this.lines.map(l => `<div class="seg-line ${l.who}"><span class="who">${this.who(l.who)}</span><span class="txt">${esc(l.text)}</span></div>`);
+    if (this.live) rows.push(`<div class="seg-line ${this.live.who} live"><span class="who">${this.who(this.live.who)}</span><span class="txt">${esc(this.live.words.join(' '))}…</span></div>`);
+    tr.innerHTML = rows.length ? rows.join('') : `<p class="empty">${this.rec ? 'Listening…' : 'Press <kbd>option</kbd> + <kbd>N</kbd> or <b>Start recording</b>. The conversation is scripted.'}</p>`;
+    tr.scrollTop = tr.scrollHeight;
+  }
+  render() {
+    const k = $('#mKind');
+    k.textContent = this.kind === 'lecture' ? 'Lecture' : 'Meeting';
+    k.className = 'badge' + (this.rec ? ' rec' : '');
+    $('#mBtn').textContent = this.rec ? 'Stop ⌥N' : 'Start recording ⌥N';
+    $('#mBtn').disabled = this.status === 'processing';
+    $('#mCtrl').disabled = !this.rec;
+    this.renderTimer(); this.renderTranscript();
+  }
+}
+
+// ---------- History + cost ----------
+function renderHistory() {
+  const el = $('#history'); if (!el) return;
+  el.innerHTML = history.length ? history.slice(0, 12).map(h => `<li><span class="t">${h.at.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span><span class="m">${esc(h.app)} · ${esc(h.mode)}</span><span class="txt">${esc(h.text.replace(/\n+/g, ' '))}</span></li>`).join('')
+    : '<li><span class="none">Your dictations from this tutorial show up here. Go back to an earlier lesson and try a few.</span></li>';
+}
+function renderCalc() {
+  const el = $('#calc');
+  const s = store.get('calc', { d: 40, m: 3, len: 30 });
+  el.innerHTML = `
+    <label>Cleaned-up dictations a day<input type="range" id="cD" min="0" max="200" step="5" value="${s.d}"><output id="oD"></output></label>
+    <label>Meetings a week<input type="range" id="cM" min="0" max="20" value="${s.m}"><output id="oM"></output></label>
+    <label>Average meeting length (minutes)<input type="range" id="cL" min="10" max="120" step="5" value="${s.len}"><output id="oL"></output></label>
+    <div class="total"><span class="big" id="oT"></span><span>a month</span><span class="note" id="oN"></span></div>`;
+  const upd = (user) => {
+    const d = +$('#cD').value, m = +$('#cM').value, len = +$('#cL').value;
+    store.set('calc', { d, m, len });
+    $('#oD').textContent = d; $('#oM').textContent = m; $('#oL').textContent = len;
+    // Dictation: ~$0.0002 each with Haiku (the app's own estimate). Meeting summary on Sonnet 5.5 ($2 in / $10 out per million
+    // tokens): ~200 transcript tokens per minute plus ~2,000 prompt tokens in, ~2,500 tokens out.
+    const perMeeting = ((200 * len + 2000) * 2 + 2500 * 10) / 1e6;
+    const total = d * 30 * 0.0002 + m * (52 / 12) * perMeeting;
+    $('#oT').textContent = '$' + total.toFixed(2);
+    $('#oN').textContent = `Estimate: about $0.0002 per cleaned-up dictation and $${perMeeting.toFixed(3)} per ${len}-minute meeting summary. Plain fn dictation is free.`;
+    if (user) emit({ type: 'cost' });
+  };
+  el.querySelectorAll('input').forEach(i => i.addEventListener('input', () => upd(true)));
+  upd(false);
+}
+
+// ---------- Small bits ----------
+function setupCopy() {
+  $$('.code .copy').forEach(b => b.addEventListener('click', async () => {
+    const text = b.parentElement.querySelector('code').textContent;
+    try { await navigator.clipboard.writeText(text); b.textContent = 'Copied'; }
+    catch (e) { const r = document.createRange(); r.selectNodeContents(b.parentElement.querySelector('code')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); b.textContent = 'Press ⌘C'; }
+    setTimeout(() => b.textContent = 'Copy', 1500);
+  }));
+  $$('.tabs').forEach(tabs => tabs.querySelectorAll('[role="tab"]').forEach(t => t.addEventListener('click', () => {
+    tabs.querySelectorAll('[role="tab"]').forEach(x => { x.setAttribute('aria-selected', String(x === t)); $('#' + x.getAttribute('aria-controls')).hidden = x !== t; });
+  })));
+  $$('.tasks li.manual').forEach(li => {
+    const toggle = () => { const id = li.dataset.task; if (done.has(id)) { done.delete(id); store.set('done', [...done]); refreshProgress(); } else complete(id); };
+    li.addEventListener('click', toggle);
+    li.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggle(); } });
+  });
+  $('#printBtn').addEventListener('click', () => window.print());
+  const themeBtn = $('#themeBtn');
+  const applyTheme = t => { if (t) document.documentElement.setAttribute('data-theme', t); else document.documentElement.removeAttribute('data-theme'); };
+  applyTheme(store.get('theme', null));
+  themeBtn.addEventListener('click', () => {
+    const cur = document.documentElement.getAttribute('data-theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    const next = cur === 'dark' ? 'light' : 'dark'; applyTheme(next); store.set('theme', next);
+  });
+}
+
+// ---------- Navigation ----------
+function buildNav() {
+  $('#lessonList').innerHTML = LESSONS.map((l, i) => `<li><a href="#${l.id}"><span class="num">${i + 1}</span>${esc(l.title)}</a></li>`).join('');
+  $('#lessonSelect').innerHTML = LESSONS.map((l, i) => `<option value="${l.id}">${i + 1}. ${esc(l.title)}</option>`).join('');
+  $('#lessonSelect').addEventListener('change', e => { location.hash = e.target.value; });
+  $('#prevBtn').addEventListener('click', () => go(-1));
+  $('#nextBtn').addEventListener('click', () => go(1));
+}
+function go(d) { const i = LESSONS.indexOf(active) + d; if (LESSONS[i]) location.hash = LESSONS[i].id; }
+function show(id) {
+  const l = LESSONS.find(x => x.id === id) || LESSONS[0];
+  if (active === l) return;
+  if (active && active.id === 'meetings' && meeting.rec) meeting.stop();
+  if (keyState.fn) onFnUp();
+  active = l;
+  LESSONS.forEach(x => x.el.hidden = x !== l);
+  $$('#lessonList a').forEach(a => a.setAttribute('aria-current', a.getAttribute('href') === '#' + l.id ? 'page' : 'false'));
+  $('#lessonSelect').value = l.id;
+  const i = LESSONS.indexOf(l);
+  $('#prevBtn').style.visibility = i === 0 ? 'hidden' : 'visible';
+  $('#nextBtn').style.visibility = i === LESSONS.length - 1 ? 'hidden' : 'visible';
+  const slot = $('.sim-slot', l.el);
+  if (slot && SIMS[l.id]) sim.mount(slot, l.id);
+  if (l.id === 'hub') renderHistory();
+  visited.add(l.id); store.set('visited', [...visited]); store.set('last', l.id);
+  refreshProgress();
+  window.scrollTo({ top: 0 });
+}
+
+const sim = new Sim(); window.sim = sim;
+let meeting;
+buildNav(); renderKeycheck(); renderStyles(); renderDict(); renderCalc(); renderHistory(); setupCopy();
+meeting = new Meeting($('#meet'));
+window.addEventListener('hashchange', () => show(location.hash.slice(1)));
+show(location.hash.slice(1) || store.get('last', 'welcome'));
+})();
+</script>
+</body>
+</html>
