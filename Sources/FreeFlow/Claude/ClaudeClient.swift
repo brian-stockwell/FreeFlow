@@ -68,6 +68,17 @@ final class ClaudeClient: Sendable {
         var cacheSystem: Bool = true
     }
 
+    /// The `thinking` value that turns thinking off on `model`, or nil to leave the field out (adaptive thinking).
+    /// Sonnet 5.5 rejects `disabled` and spells it `between_tools`; Opus 5.5 and Fable can't turn thinking off at all,
+    /// so low effort is the only lever; Haiku 5.5 and Opus 5 accept `disabled` only at effort high or below.
+    static func thinkingOff(model: String, effort: String) -> [String: Any]? {
+        let highOrBelow = effort != "xhigh" && effort != "max"
+        if model.hasPrefix("claude-sonnet-5-5") { return highOrBelow ? ["type": "between_tools"] : nil }
+        if model.hasPrefix("claude-opus-5-5") || model.hasPrefix("claude-fable") || model.hasPrefix("claude-mythos") { return nil }
+        if model.hasPrefix("claude-haiku-5-5") || model.hasPrefix("claude-opus-5") { return highOrBelow ? ["type": "disabled"] : nil }
+        return ["type": "disabled"]
+    }
+
     func send(_ r: Request, feature: String) async throws -> ClaudeResponse {
         let key = Settings.shared.apiKey
         guard !key.isEmpty else { throw ClaudeError.noAPIKey }
@@ -90,10 +101,10 @@ final class ClaudeClient: Sendable {
             outputConfig["format"] = ["type": "json_schema", "schema": schema]
         }
         body["output_config"] = outputConfig
-        if r.disableThinking {
-            body["thinking"] = ["type": "disabled"]
-        } else {
+        if !r.disableThinking {
             body["thinking"] = ["type": "adaptive"]
+        } else if let off = Self.thinkingOff(model: r.model, effort: r.effort) {
+            body["thinking"] = off
         }
 
         var req = URLRequest(url: endpoint)

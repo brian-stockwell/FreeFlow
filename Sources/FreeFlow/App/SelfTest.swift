@@ -17,6 +17,10 @@ enum SelfTest {
             case "--test-cleanup":
                 await testCleanup(path: args.count > 2 ? args[2] : "", thinking: args.count > 3 ? args[3] : "off",
                                   effort: args.count > 4 ? args[4] : "low", style: args.count > 5 ? args[5] : "casual")
+            case "--test-command":
+                await testCommand(instruction: args.count > 2 ? args[2] : "make this into an email",
+                                  selected: args.count > 3 ? args[3] : "So you did it all during a class period as well? It was really cool.",
+                                  model: args.count > 4 ? args[4] : Settings.shared.commandModel)
             case "--test-transform":
                 let key = args.count > 2 ? args[2] : "polish"
                 let text = args.count > 3 ? args[3] : "so basically what i'm thinking is we should probably just like go ahead and build the thing and see what happens, and then if it doesn't work we can always, you know, go back and change it, i mean it's not like we have a ton of time anyway so"
@@ -131,6 +135,18 @@ enum SelfTest {
             let r = try await ClaudeClient.shared.send(.init(model: Settings.shared.cleanupModel,
                 system: Prompts.cleanupSystem(level: .light), userContent: user, maxTokens: 2048, effort: "low", disableThinking: true, timeout: 30), feature: "test")
             print("latency: \(String(format: "%.2f", Date().timeIntervalSince(t0)))s  usage: \(r.usage)  cost: $\(ClaudePricing.cost(model: Settings.shared.cleanupModel, usage: r.usage))")
+            print("OUTPUT:\n\(r.text)")
+        } catch { print("ERROR:", error) }
+    }
+
+    /// Same request shape as Command Mode (structured output, thinking off) against the configured command model.
+    static func testCommand(instruction: String, selected: String, model: String) async {
+        let user = "<context>\nAPP: Claude, CATEGORY: ai\nUSER NAME: \(Settings.shared.userFirstName) \(Settings.shared.userLastName)\nSELECTED TEXT:\n\(selected)\nFULL FIELD CONTENTS:\n\(selected)\n</context>\n\n<instruction>\n\(instruction)\n</instruction>"
+        let t0 = Date()
+        do {
+            let r = try await ClaudeClient.shared.send(.init(model: model, system: Prompts.commandSystem(), userContent: user,
+                maxTokens: 8192, effort: "low", disableThinking: true, jsonSchema: Prompts.commandSchema, timeout: 30), feature: "test")
+            print("model: \(model)  latency: \(String(format: "%.2f", Date().timeIntervalSince(t0)))s  cost: $\(ClaudePricing.cost(model: model, usage: r.usage))")
             print("OUTPUT:\n\(r.text)")
         } catch { print("ERROR:", error) }
     }
