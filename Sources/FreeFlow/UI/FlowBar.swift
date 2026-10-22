@@ -279,20 +279,24 @@ struct FlowBarView: View {
         }
     }
 
+    /// Kept small since it sits on screen for a whole meeting or lecture; the controls appear on hover.
     private var recordingMeetingBar: some View {
-        bar {
-            HStack(spacing: 8) {
-                Circle().fill(.red).frame(width: 7, height: 7)
-                if meeting.kind == .lecture {
-                    Image(systemName: "graduationcap.fill").font(.system(size: 10, weight: .semibold)).foregroundStyle(.white)
+        bar(compact: true) {
+            HStack(spacing: 5) {
+                Circle().fill(.red).frame(width: 6, height: 6)
+                Image(systemName: meeting.kind == .lecture ? "graduationcap.fill" : "person.2.fill")
+                    .font(.system(size: 9, weight: .semibold)).foregroundStyle(.white.opacity(0.85))
+                Text(meeting.elapsedString)
+                    .font(.system(size: 10, weight: .medium)).foregroundStyle(.white).monospacedDigit()
+                if model.hovering {
+                    pillButton(meeting.kind == .lecture ? "person.2.fill" : "graduationcap.fill", size: 14,
+                               help: "Switch to \(meeting.kind.toggled.label) mode (or tap Control)") { meeting.switchKind() }
+                    pillButton("stop.fill", size: 14, help: "Stop recording") { meeting.stop() }
                 }
-                Text("\(meeting.kind == .lecture ? "Lecture" : "Recording") \(meeting.elapsedString)")
-                    .font(.system(size: 11, weight: .medium)).foregroundStyle(.white).monospacedDigit()
-                pillButton(meeting.kind == .lecture ? "person.2.fill" : "graduationcap.fill",
-                           help: "Switch to \(meeting.kind.toggled.label) mode (or tap Control)") { meeting.switchKind() }
-                pillButton("stop.fill", help: "Stop recording") { meeting.stop() }
             }
+            .frame(height: 14)
         }
+        .help(meeting.kind == .lecture ? "Recording lecture" : "Recording meeting")
     }
 
     private func offerBar(_ platform: String) -> some View {
@@ -323,18 +327,18 @@ struct FlowBarView: View {
         .buttonStyle(FlowBarButtonStyle())
     }
 
-    private func pillButton(_ icon: String, help: String, action: @escaping () -> Void) -> some View {
+    private func pillButton(_ icon: String, size: CGFloat = 18, help: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: icon).font(.system(size: 10, weight: .bold))
-                .frame(width: 18, height: 18).contentShape(Rectangle())
+            Image(systemName: icon).font(.system(size: size * 0.55, weight: .bold))
+                .frame(width: size, height: size).contentShape(Rectangle())
         }
         .buttonStyle(.plain).foregroundStyle(.white.opacity(0.85)).help(help)
     }
 
-    private func bar<Content: View>(@ViewBuilder _ inner: () -> Content) -> some View {
+    private func bar<Content: View>(compact: Bool = false, @ViewBuilder _ inner: () -> Content) -> some View {
         inner()
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
+            .padding(.horizontal, compact ? 8 : 12)
+            .padding(.vertical, compact ? 4 : 7)
             .background(.ultraThinMaterial, in: Capsule())
             .background(Capsule().fill(Color.black.opacity(0.6)))
             .overlay(Capsule().strokeBorder(Color.white.opacity(0.12)))

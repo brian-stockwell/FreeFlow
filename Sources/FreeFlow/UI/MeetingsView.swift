@@ -180,6 +180,8 @@ struct MeetingDetailView: View {
     @State private var asking = false
     @State private var askError: String?
     @State private var newTask = ""
+    @State private var followLive = true      // live transcript sticks to the newest line only while scrolled to the bottom
+    @State private var userScrolling = false
 
     private var isLive: Bool { recorder.isRecording && recorder.currentMeetingID == meeting.id }
     private var kind: MeetingKind { isLive ? recorder.kind : meeting.kind }
@@ -271,9 +273,24 @@ struct MeetingDetailView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .onChange(of: recorder.liveSegments.count) { _, _ in proxy.scrollTo("bottom") }
-                .onChange(of: recorder.liveMicText) { _, _ in proxy.scrollTo("bottom") }
-                .onChange(of: recorder.liveSystemText) { _, _ in proxy.scrollTo("bottom") }
+                // Only a scroll (not new text growing the content) decides whether we're following the bottom.
+                .onScrollGeometryChange(for: LiveScroll.self) { g in
+                    LiveScroll(offset: g.contentOffset.y, fromBottom: g.contentSize.height - g.visibleRect.maxY)
+                } action: { old, new in
+                    if new.offset != old.offset { followLive = new.fromBottom < 12 }
+                }
+                .onScrollPhaseChange { _, phase in userScrolling = phase.isScrolling }
+                .onChange(of: recorder.liveSegments.count) { _, _ in followBottom(proxy) }
+                .onChange(of: recorder.liveMicText) { _, _ in followBottom(proxy) }
+                .onChange(of: recorder.liveSystemText) { _, _ in followBottom(proxy) }
+                .overlay(alignment: .bottomTrailing) {
+                    if !followLive {
+                        Button { followLive = true; proxy.scrollTo("bottom") } label: {
+                            Label("Jump to live", systemImage: "arrow.down")
+                        }
+                        .controlSize(.small).padding(8)
+                    }
+                }
             }
             .frame(minHeight: 120)
             Text("My thoughts").font(.headline)
@@ -281,6 +298,15 @@ struct MeetingDetailView: View {
                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(.quaternary))
         }
         .padding(.horizontal, 24).padding(.bottom, 16)
+    }
+
+    private func followBottom(_ proxy: ScrollViewProxy) {
+        if followLive && !userScrolling { proxy.scrollTo("bottom") }
+    }
+
+    private struct LiveScroll: Equatable {
+        var offset: CGFloat
+        var fromBottom: CGFloat
     }
 
     private func meter(_ label: String, _ level: Float, _ color: Color) -> some View {

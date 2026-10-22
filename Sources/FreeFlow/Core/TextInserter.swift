@@ -9,20 +9,23 @@ enum TextInserter {
     private static var restoreWork: DispatchWorkItem?
 
     /// Pastes `text`. Returns false when there is clearly nowhere to paste (text is left on the clipboard).
+    /// Accessibility can miss a focused field (Chromium and Electron apps often do), so without one we still paste,
+    /// but leave the text on the clipboard in case the paste landed nowhere.
     @MainActor
     static func paste(_ text: String, context: InsertionContext, restoreClipboard: Bool = true) -> Bool {
         guard !text.isEmpty else { return false }
         let pb = NSPasteboard.general
         restoreWork?.cancel()
-        if restoreClipboard { snapshot(pb) }
+        let restoreLater = restoreClipboard && context.hasFocusedElement
+        if restoreLater { snapshot(pb) }
         pb.clearContents()
         pb.setString(text, forType: .string)
 
-        guard context.hasFocusedElement else { return false }
+        guard context.hasFocusedElement || NSWorkspace.shared.frontmostApplication != nil else { return false }
         // Make sure the target app is frontmost (it should be; we never activate ourselves).
         HotkeyManager.postKey(CGKeyCode(kVK_ANSI_V), flags: .maskCommand)
 
-        if restoreClipboard {
+        if restoreLater {
             let work = DispatchWorkItem { restore(pb) }
             restoreWork = work
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: work)

@@ -274,6 +274,8 @@ final class DictationController {
 
     private func process(asr rawAsr: String, mode: DictationMode, ctx: InsertionContext,
                          duration: Double, speech: Double, audioURL: URL?, keyUpAt: Date) async {
+        // The key-down capture can miss the field in Chromium apps; by now their accessibility tree has had time to build.
+        let ctx = ctx.hasFocusedElement ? ctx : await refocus(ctx, mode: mode)
         var entry = HistoryEntry()
         entry.mode = mode
         entry.appBundleID = ctx.appBundleID
@@ -404,6 +406,23 @@ final class DictationController {
                                                before: ctx.textBefore ?? "", after: ctx.textAfter ?? ""))
         }
         finishUI(message: nil, success: pasted)
+    }
+
+    /// Looks for the focused element again, a few times. Only a capture from the same app is used, so switching apps
+    /// mid-dictation doesn't change the context the cleanup was meant for.
+    private func refocus(_ ctx: InsertionContext, mode: DictationMode) async -> InsertionContext {
+        for attempt in 0..<3 {
+            if attempt > 0 { try? await Task.sleep(for: .milliseconds(80)) }
+            let probe = ContextReader.capture(readText: false)
+            guard probe.pid == ctx.pid else { return ctx }
+            if probe.hasFocusedElement {
+                Log.write("ax: found focused element on retry \(attempt + 1)")
+                guard Settings.shared.contextAwareness || mode == .command else { return probe }
+                let full = ContextReader.capture(readText: true)
+                return full.hasFocusedElement ? full : probe
+            }
+        }
+        return ctx
     }
 
     private func spacingOnly(_ text: String, before: String?, after: String?) -> String {

@@ -48,12 +48,7 @@ enum ContextReader {
         ctx.pid = app.processIdentifier
 
         let appEl = AXUIElementCreateApplication(app.processIdentifier)
-        var focusedRef: CFTypeRef?
-        let focused: AXUIElement?
-        if AXUIElementCopyAttributeValue(appEl, kAXFocusedUIElementAttribute as CFString, &focusedRef) == .success,
-           let f = focusedRef {
-            focused = (f as! AXUIElement)
-        } else { focused = nil }
+        let focused = focusedElement(appEl, pid: app.processIdentifier, bundleID: app.bundleIdentifier)
 
         var windowRef: CFTypeRef?
         var window: AXUIElement?
@@ -107,6 +102,30 @@ enum ContextReader {
             ctx.screenNames = collectScreenNames(window: window, exclude: focused)
         }
         return ctx
+    }
+
+    /// The app's focused element. Chromium and Electron apps (Chrome, Claude, Slack…) build their accessibility tree
+    /// lazily and can drop it when idle, so the first query sometimes fails even with a text field focused.
+    /// Asking for the tree explicitly and falling back to the system-wide element covers most of those misses.
+    static func focusedElement(_ appEl: AXUIElement, pid: pid_t, bundleID: String?) -> AXUIElement? {
+        let (el, err) = copyFocused(appEl)
+        if let el { return el }
+        AXUIElementSetAttributeValue(appEl, "AXManualAccessibility" as CFString, kCFBooleanTrue)
+        if let el = copyFocused(appEl).element { return el }
+        var owner: pid_t = 0
+        if let el = copyFocused(AXUIElementCreateSystemWide()).element,
+           AXUIElementGetPid(el, &owner) == .success, owner == pid {
+            return el
+        }
+        Log.write("ax: no focused element in \(bundleID ?? "pid \(pid)") (error \(err.rawValue))")
+        return nil
+    }
+
+    private static func copyFocused(_ el: AXUIElement) -> (element: AXUIElement?, error: AXError) {
+        var ref: CFTypeRef?
+        let err = AXUIElementCopyAttributeValue(el, kAXFocusedUIElementAttribute as CFString, &ref)
+        guard err == .success, let f = ref, CFGetTypeID(f) == AXUIElementGetTypeID() else { return (nil, err) }
+        return ((f as! AXUIElement), err)
     }
 
     // MARK: - Classification
