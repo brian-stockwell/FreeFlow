@@ -6,6 +6,9 @@ enum Log {
     private static let url = Database.shared.supportDirectory.appendingPathComponent("freeflow.log")
     private static let fmt: DateFormatter = { let f = DateFormatter(); f.dateFormat = "HH:mm:ss.SSS"; return f }()
 
+    /// Waits for pending lines to reach disk (for when the process is about to exit).
+    static func flush() { queue.sync {} }
+
     static func write(_ message: String) {
         NSLog("%@", message)
         let line = "\(fmt.string(from: Date())) \(message)\n"

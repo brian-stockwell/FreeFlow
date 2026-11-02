@@ -65,10 +65,12 @@ enum Sounds {
         let dest = customDirectory.appendingPathComponent(url.lastPathComponent)
         try? FileManager.default.removeItem(at: dest)
         do { try FileManager.default.copyItem(at: url, to: dest) } catch { return nil }
-        cache.removeAll()
+        queue.async { cache.removeAll() }
         return "file:\(dest.path)"
     }
 
+    /// Playing touches the audio system, which can stall while the output device changes, so it stays off the main thread.
+    private static let queue = DispatchQueue(label: "freeflow.sounds", qos: .userInitiated)
     private static var cache: [String: NSSound] = [:]
 
     static func play(_ cue: Cue) {
@@ -95,10 +97,13 @@ enum Sounds {
     }
 
     static func play(id: String, volume: Float) {
-        guard id != "none", volume > 0.01, let snd = sound(id: id) else { return }
-        snd.stop()
-        snd.volume = volume
-        snd.play()
+        guard id != "none", volume > 0.01 else { return }
+        queue.async {
+            guard let snd = sound(id: id) else { return }
+            snd.stop()
+            snd.volume = volume
+            snd.play()
+        }
     }
 
     private static func sound(id: String) -> NSSound? {

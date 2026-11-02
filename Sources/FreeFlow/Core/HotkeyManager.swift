@@ -19,23 +19,42 @@ enum HotkeyEvent: Sendable {
     case transform(String) // a Transform hotkey (id)
 }
 
+/// A value shared between the main thread and the event-tap thread.
+@propertyWrapper
+final class Locked<Value>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value: Value
+    init(wrappedValue: Value) { value = wrappedValue }
+    var wrappedValue: Value {
+        get { lock.withLock { value } }
+        set { lock.withLock { value = newValue } }
+    }
+}
+
 /// Global CGEventTap-based hotkey listener. Needs Accessibility permission.
+///
+/// The tap runs on its own thread so Fn keeps working, and the keyboard keeps responding system-wide, whatever the main
+/// thread is doing.
 final class HotkeyManager {
     static let shared = HotkeyManager()
 
     /// Identifies synthetic events we post ourselves (paste) so the tap ignores them.
     static let syntheticMarker: Int64 = 0x46_4C_4F_57 // "FLOW"
 
-    var handler: ((HotkeyEvent) -> Void)?
-    /// Set by the controller: when true, Fn/Esc/Space events are swallowed so other apps never see them.
-    var isCapturing = false
-    /// Set by MeetingRecorder: while true, a lone Control tap emits `.meetingControlTap`.
-    var isRecordingMeeting = false
-    var swallowFn = true
-    /// Registered Transform hotkeys (set by TransformController.reloadShortcuts).
-    var transformShortcuts: [(flags: CGEventFlags, keyCode: Int, id: String)] = []
+    /// How long the main thread gets to pick up an Fn press before the app counts as frozen. Longer than one slow
+    /// Accessibility call (macOS gives those 6 s), which can legitimately hold the main thread.
+    private static let mainThreadDeadline: TimeInterval = 8
 
-    private var tap: CFMachPort?
+    @Locked var handler: ((HotkeyEvent) -> Void)? = nil
+    /// Set by the controller: when true, Fn/Esc/Space events are swallowed so other apps never see them.
+    @Locked var isCapturing = false
+    /// Set by MeetingRecorder: while true, a lone Control tap emits `.meetingControlTap`.
+    @Locked var isRecordingMeeting = false
+    @Locked var swallowFn = true
+    /// Registered Transform hotkeys (set by TransformController.reloadShortcuts).
+    @Locked var transformShortcuts: [(flags: CGEventFlags, keyCode: Int, id: String)] = []
+
+    @Locked private var tap: CFMachPort? = nil
     private var runLoopSource: CFRunLoopSource?
     private(set) var fnDown = false
     private(set) var isRunning = false
@@ -70,22 +89,35 @@ final class HotkeyManager {
         }
         guard let tap = created else { return false }
         self.tap = tap
-        runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
-        CFRunLoopAddSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
-        CGEvent.tapEnable(tap: tap, enable: true)
+        let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
+        runLoopSource = source
+        let thread = Thread {
+            CFRunLoopAddSource(CFRunLoopGetCurrent(), source, .commonModes)
+            CGEvent.tapEnable(tap: tap, enable: true)
+            CFRunLoopRun() // returns once stop() invalidates the source
+        }
+        thread.name = "freeflow.hotkeys"
+        thread.qualityOfService = .userInteractive
+        thread.start()
         isRunning = true
         return true
     }
 
     func stop() {
         if let tap { CGEvent.tapEnable(tap: tap, enable: false) }
-        if let src = runLoopSource { CFRunLoopRemoveSource(CFRunLoopGetMain(), src, .commonModes) }
+        if let src = runLoopSource { CFRunLoopSourceInvalidate(src) }
         tap = nil; runLoopSource = nil; isRunning = false
     }
 
     private func handle(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
+            // Fn may have been released while the tap was off; without this the next press would look like a repeat.
+            if fnDown && !CGEventSource.flagsState(.hidSystemState).contains(.maskSecondaryFn) {
+                fnDown = false
+                lastFnUpAt = CFAbsoluteTimeGetCurrent()
+                emit(.fnUp)
+            }
             return Unmanaged.passUnretained(event)
         }
         if event.getIntegerValueField(.eventSourceUserData) == HotkeyManager.syntheticMarker {
@@ -186,8 +218,36 @@ final class HotkeyManager {
     private func emit(_ e: HotkeyEvent) {
         Log.write("hotkey: \(e)")
         let h = handler
-        DispatchQueue.main.async { h?(e) }
+        let pickedUp = Locked(wrappedValue: false)
+        DispatchQueue.main.async {
+            pickedUp.wrappedValue = true
+            h?(e)
+        }
+        if case .fnDown = e {
+            DispatchQueue.global(qos: .userInteractive).asyncAfter(deadline: .now() + Self.mainThreadDeadline) {
+                if !pickedUp.wrappedValue { Self.recoverFromFreeze() }
+            }
+        }
     }
+
+    /// Last resort: Fn was pressed and the main thread never answered, so nothing in the app can run. Quitting releases
+    /// the mic and stops the recording; relaunching puts the app back without the user having to do it.
+    private static func recoverFromFreeze() {
+        Log.write("main thread frozen: relaunching")
+        Log.flush()
+        UserDefaults.standard.set(true, forKey: recoveredFromFreezeKey)
+        UserDefaults.standard.synchronize()
+        let path = Bundle.main.bundlePath
+        if path.hasSuffix(".app") {
+            let relaunch = Process()
+            relaunch.executableURL = URL(fileURLWithPath: "/bin/sh")
+            relaunch.arguments = ["-c", "sleep 0.5; /usr/bin/open \"$0\"", path]
+            try? relaunch.run()
+        }
+        _exit(0)
+    }
+
+    static let recoveredFromFreezeKey = "recoveredFromFreeze"
 
     // MARK: - Synthetic key presses
 

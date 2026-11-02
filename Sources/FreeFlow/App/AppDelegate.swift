@@ -15,6 +15,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         DictationController.shared.start()
         FlowBarController.shared.show()
+        if UserDefaults.standard.bool(forKey: HotkeyManager.recoveredFromFreezeKey) {
+            UserDefaults.standard.removeObject(forKey: HotkeyManager.recoveredFromFreezeKey)
+            Notifier.notify("FreeFlow restarted", "It froze, so pressing Fn stopped the recording and restarted it.")
+        }
         MeetingDetector.shared.start()
         Database.shared.pruneAudio(olderThan: settings.audioRetentionDays)
         MeetingRecorder.shared.deleteLeftoverAudio()

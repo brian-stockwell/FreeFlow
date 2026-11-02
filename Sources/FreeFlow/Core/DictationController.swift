@@ -25,7 +25,7 @@ final class DictationController {
     private(set) var lastError: String?
     var hotkeysPaused = false { didSet { HotkeyManager.shared.swallowFn = !hotkeysPaused } }
 
-    private let recorder = AudioRecorder()
+    private var recorder: AudioRecorder?
     private var session: SpeechSession?
     private var contextTask: Task<InsertionContext, Never>?
     private var pendingFinish: DispatchWorkItem?
@@ -38,6 +38,11 @@ final class DictationController {
     /// Incremented every time a recording is finalized; a processing task whose generation is stale drops its result.
     private var generation = 0
     private var lastShortTapEndedAt: Date?
+    private var processingSince: Date?
+    /// How long to wait for the on-device transcriber to wrap up before using the live text instead.
+    private static let transcriberTimeout: Duration = .seconds(10)
+    /// After this long in `.processing`, an Fn press means "stop waiting".
+    private static let abandonProcessingAfter: TimeInterval = 8
 
     private init() {}
 
@@ -94,9 +99,15 @@ final class DictationController {
                     handsFreeSince = Date()
                     Sounds.play(.ready)
                     Log.write("double-tap → hands-free")
+                } else {
+                    // Still recording with no Fn release seen, so the release got lost. Fn must always be able to stop it.
+                    Log.write("Fn pressed again without a release → finishing")
+                    finishAndProcess()
                 }
             case .processing:
-                break
+                if let since = processingSince, Date().timeIntervalSince(since) > Self.abandonProcessingAfter {
+                    abandonProcessing()
+                }
             }
         case .fnUp:
             guard state == .recording, !handsFree else { return }
@@ -156,6 +167,7 @@ final class DictationController {
         self.handsFree = handsFree
         self.liveText = ""
         self.lastError = nil
+        self.level = 0
         state = .recording
         FlowBarController.shared.clearMessage()
         recordingStart = Date()
@@ -177,6 +189,19 @@ final class DictationController {
         let audioURL = Database.shared.audioDirectory.appendingPathComponent(UUID().uuidString + ".wav")
         currentAudioURL = audioURL
 
+        let recorder = AudioRecorder()
+        self.recorder = recorder
+        recorder.onBuffer = { buf in session.feed(buf) }
+        recorder.onLevel = { [weak self] l in
+            DispatchQueue.main.async { self?.level = l }
+        }
+        recorder.onFailure = { [weak self, weak recorder] message in
+            Task { @MainActor in
+                guard let self, self.recorder === recorder, self.state == .recording else { return }
+                self.fail("Microphone error: \(message)")
+            }
+        }
+
         Task { [weak self] in
             guard let self else { return }
             let format = await session.bestFormat()
@@ -185,15 +210,12 @@ final class DictationController {
                     self?.liveText = volatile.isEmpty ? final : (final.isEmpty ? volatile : final + " " + volatile)
                 }
             }
-            recorder.onBuffer = { buf in session.feed(buf) }
-            recorder.onLevel = { [weak self] l in
-                DispatchQueue.main.async { self?.level = l }
-            }
+            recorder.start(targetFormat: format, fileURL: audioURL, deviceUID: Settings.shared.microphoneUID)
             do {
-                try recorder.start(targetFormat: format, fileURL: audioURL, deviceUID: Settings.shared.microphoneUID)
                 try await session.start()
             } catch {
-                self.fail("Microphone error: \(error.localizedDescription)")
+                guard self.session === session else { return }
+                self.fail("Speech recognition error: \(error.localizedDescription)")
             }
         }
 
@@ -214,7 +236,7 @@ final class DictationController {
         state = .idle
         HotkeyManager.shared.isCapturing = false
         stopTimers()
-        recorder.stop()
+        recorder?.stop()
         if let s = session { Task { await s.cancel() } }
         session = nil
         if let url = currentAudioURL { try? FileManager.default.removeItem(at: url) }
@@ -237,7 +259,7 @@ final class DictationController {
         stopTimers()
         Sounds.play(.stop)
         let keyUpAt = Date()
-        let (duration, speech) = recorder.stop()
+        let (duration, speech) = recorder?.stop() ?? (0, 0)
         let mode = self.mode
         let audioURL = currentAudioURL
         let contextTask = self.contextTask
@@ -245,9 +267,20 @@ final class DictationController {
         generation += 1
         let myGeneration = generation
 
+        // The mic never delivered audio (stuck on a Bluetooth handover, say): nothing to transcribe, so stop right now.
+        if duration == 0 {
+            Task { await session.cancel() }
+            if let url = audioURL { try? FileManager.default.removeItem(at: url) }
+            let attempted = recordingStart.map { keyUpAt.timeIntervalSince($0) > 1 } ?? false
+            Log.write("finish: no audio arrived from the mic")
+            finishUI(message: attempted ? "Microphone didn't respond" : nil, success: false, silent: !attempted)
+            return
+        }
+
+        processingSince = Date()
         Task { [weak self] in
             guard let self else { return }
-            let asr = await session.finish()
+            let asr = await self.finalTranscript(session)
             guard myGeneration == self.generation else {
                 // Superseded by a double-tap takeover: drop this short tap silently.
                 if let url = audioURL { try? FileManager.default.removeItem(at: url) }
@@ -255,7 +288,42 @@ final class DictationController {
             }
             let ctx = await contextTask?.value ?? ContextReader.capture(readText: false)
             await self.process(asr: asr, mode: mode, ctx: ctx, duration: duration, speech: speech,
-                               audioURL: audioURL, keyUpAt: keyUpAt)
+                               audioURL: audioURL, keyUpAt: keyUpAt, generation: myGeneration)
+        }
+    }
+
+    /// The transcriber's final text, or what the live view had if it doesn't wrap up in time.
+    private func finalTranscript(_ session: SpeechSession) async -> String {
+        await withCheckedContinuation { (continuation: CheckedContinuation<String, Never>) in
+            var delivered = false
+            @MainActor func deliver(_ text: String) {
+                guard !delivered else { return }
+                delivered = true
+                continuation.resume(returning: text)
+            }
+            Task { @MainActor in deliver(await session.finish()) }
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: Self.transcriberTimeout)
+                guard !delivered else { return }
+                Log.write("transcriber didn't finish in time; using the live text")
+                Task { await session.cancel() }
+                deliver(self?.liveText ?? "")
+            }
+        }
+    }
+
+    /// Fn pressed while a dictation has been processing for too long: release the app, keep the words on the clipboard.
+    private func abandonProcessing() {
+        Log.write("abandoning a stuck dictation")
+        generation += 1
+        state = .idle
+        level = 0
+        let text = liveText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if text.isEmpty {
+            FlowBarController.shared.flash(message: "Stopped")
+        } else {
+            TextInserter.copyToClipboard(text)
+            FlowBarController.shared.flash(message: "Stopped. Transcript copied to clipboard")
         }
     }
 
@@ -264,8 +332,11 @@ final class DictationController {
         state = .idle
         HotkeyManager.shared.isCapturing = false
         stopTimers()
-        recorder.stop()
+        recorder?.stop()
+        if let s = session { Task { await s.cancel() } }
         session = nil
+        if let url = currentAudioURL { try? FileManager.default.removeItem(at: url) }
+        currentAudioURL = nil
         Sounds.play(.error)
         Notifier.notify("FreeFlow", message)
     }
@@ -273,7 +344,7 @@ final class DictationController {
     // MARK: - Processing pipeline
 
     private func process(asr rawAsr: String, mode: DictationMode, ctx: InsertionContext,
-                         duration: Double, speech: Double, audioURL: URL?, keyUpAt: Date) async {
+                         duration: Double, speech: Double, audioURL: URL?, keyUpAt: Date, generation myGeneration: Int) async {
         // The key-down capture can miss the field in Chromium apps; by now their accessibility tree has had time to build.
         let ctx = ctx.hasFocusedElement ? ctx : await refocus(ctx, mode: mode)
         var entry = HistoryEntry()
@@ -344,6 +415,7 @@ final class DictationController {
                         entry.numWordsCorrected = max(0, TextProcessor.wordCount(dict.text) - TextProcessor.wordCount(cleaned))
                     }
                 } catch {
+                    guard myGeneration == generation else { return }
                     entry.errorMessage = error.localizedDescription
                     toPaste = TextProcessor.fitToContext(dict.text, before: ctx.textBefore, after: ctx.textAfter)
                     Notifier.notify("Pasted raw transcript", error.localizedDescription)
@@ -354,6 +426,7 @@ final class DictationController {
             entry.instruction = asr
             do {
                 let (action, text, usage, model) = try await command(instruction: dict.text, ctx: ctx)
+                guard myGeneration == generation else { return }
                 entry.model = model
                 entry.inputTokens = usage.inputTokens; entry.outputTokens = usage.outputTokens
                 entry.cacheReadTokens = usage.cacheReadTokens
@@ -381,6 +454,7 @@ final class DictationController {
                 toPaste = text
                 status = .formatted
             } catch {
+                guard myGeneration == generation else { return }
                 entry.status = .failed
                 entry.errorMessage = error.localizedDescription
                 save(entry)
@@ -389,6 +463,7 @@ final class DictationController {
             }
         }
 
+        guard myGeneration == generation else { return } // abandoned while waiting on Claude: don't paste out of nowhere
         entry.numWords = TextProcessor.wordCount(toPaste)
         TransformController.shared.noteDictation(toPaste)
         let pasted = TextInserter.paste(toPaste, context: ctx)

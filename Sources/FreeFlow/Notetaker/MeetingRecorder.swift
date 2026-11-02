@@ -24,8 +24,10 @@ final class MeetingRecorder {
     private(set) var lastError: String?
     private(set) var summarizingMeetingID: String?
 
-    private let micRecorder = AudioRecorder()
+    private var micRecorder = AudioRecorder()
     private let systemTap = SystemAudioTap()
+    /// Core Audio can stall while devices change hands, so the system tap starts and stops off the main thread.
+    private let systemTapQueue = DispatchQueue(label: "freeflow.systemtap", qos: .userInitiated)
     private var micSession: SpeechSession?
     private var systemSession: SpeechSession?
     private var tick: Timer?
@@ -71,6 +73,8 @@ final class MeetingRecorder {
         let mic = SpeechSession(contextualStrings: contextualStrings(), timeIndexed: true)
         let sys = SpeechSession(contextualStrings: contextualStrings(), timeIndexed: true)
         micSession = mic; systemSession = sys
+        let micRecorder = AudioRecorder()
+        self.micRecorder = micRecorder
 
         Task { [weak self] in
             guard let self else { return }
@@ -85,14 +89,22 @@ final class MeetingRecorder {
             micRecorder.onLevel = { [weak self] l in DispatchQueue.main.async { self?.micLevel = l } }
             systemTap.onBuffer = { buf in sys.feed(buf) }
             systemTap.onLevel = { [weak self] l in DispatchQueue.main.async { self?.systemLevel = l } }
+            micRecorder.onFailure = { [weak self] message in
+                DispatchQueue.main.async { self?.lastError = "Microphone: \(message)" }
+            }
+            micRecorder.start(targetFormat: format, fileURL: micURL, deviceUID: Settings.shared.microphoneUID)
             do {
-                try micRecorder.start(targetFormat: format, fileURL: micURL, deviceUID: Settings.shared.microphoneUID)
                 try await mic.start()
             } catch {
                 self.lastError = "Microphone: \(error.localizedDescription)"
             }
             do {
-                try systemTap.start(targetFormat: format, fileURL: sysURL)
+                let tap = systemTap, tapQueue = systemTapQueue
+                try await withCheckedThrowingContinuation { (c: CheckedContinuation<Void, Error>) in
+                    tapQueue.async {
+                        do { try tap.start(targetFormat: format, fileURL: sysURL); c.resume() } catch { c.resume(throwing: error) }
+                    }
+                }
                 try await sys.start()
             } catch {
                 self.lastError = error.localizedDescription
@@ -127,7 +139,8 @@ final class MeetingRecorder {
         maxTimer?.invalidate(); maxTimer = nil
         let duration = startedAt.map { Date().timeIntervalSince($0) } ?? 0
         micRecorder.stop()
-        systemTap.stop()
+        let tap = systemTap
+        systemTapQueue.async { tap.stop() }
         let mic = micSession, sys = systemSession
         micSession = nil; systemSession = nil
         Sounds.play(.stop)

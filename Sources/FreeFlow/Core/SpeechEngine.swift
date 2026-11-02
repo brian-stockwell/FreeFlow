@@ -56,6 +56,7 @@ actor SpeechSession {
     /// Called (on the main thread) whenever the live text changes.
     var onUpdate: (@Sendable (String, String) -> Void)?
     private var started = false
+    private var finished = false
 
     init(contextualStrings: [String], timeIndexed: Bool) {
         let attrs: Set<SpeechTranscriber.ResultAttributeOption> = timeIndexed ? [.audioTimeRange] : []
@@ -89,7 +90,7 @@ actor SpeechSession {
     }
 
     func start() async throws {
-        guard !started else { return }
+        guard !started, !finished else { return }
         started = true
         let f = await bestFormat()
         try? await analyzer.setContext(context)
@@ -143,8 +144,10 @@ actor SpeechSession {
 
     /// Ends input and waits for the final transcript.
     func finish() async -> String {
+        finished = true
         continuation?.finish()
         continuation = nil
+        guard started else { return "" } // stopped before analysis began, so there's nothing to wait for
         try? await analyzer.finalizeAndFinishThroughEndOfInput()
         _ = await resultsTask?.value
         if !volatileText.isEmpty { // anything not finalized still counts
@@ -155,6 +158,7 @@ actor SpeechSession {
     }
 
     func cancel() async {
+        finished = true
         continuation?.finish()
         continuation = nil
         await analyzer.cancelAndFinishNow()
