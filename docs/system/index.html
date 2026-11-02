@@ -1,0 +1,858 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FreeFlow Web</title>
+<meta name="description" content="Browser prototype of FreeFlow: dictation cleanup and lecture study notes.">
+<style>
+:root { color-scheme: light; --ink:#222; --muted:#5f5a52; --line:#ddd6c8; --bg:#faf7f0; --card:#fff; --accent:#782f40; --tan:#f3ecdd; --gold:#8a6d1f; --ok:#256f3a; --err:#a11d2c; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; }
+a { color:var(--accent); }
+header { background:var(--accent); color:#fff; padding:12px 16px; display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center; }
+header h1 { font-size:20px; margin:0; }
+.badge { background:#fff; color:var(--accent); font-size:12px; font-weight:700; padding:2px 8px; border-radius:99px; }
+.spacer { flex:1; }
+header label { font-size:14px; display:flex; align-items:center; gap:6px; }
+nav { background:var(--tan); border-bottom:1px solid var(--line); padding:8px 16px; display:flex; flex-wrap:wrap; gap:6px; }
+nav a { padding:5px 10px; border-radius:6px; text-decoration:none; color:var(--ink); font-size:15px; }
+nav a.on { background:var(--accent); color:#fff; }
+main { max-width:1080px; margin:0 auto; padding:20px 16px 48px; }
+h2 { color:var(--accent); margin:0 0 8px; font-size:24px; }
+h3 { margin:0 0 8px; font-size:18px; }
+.card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; margin:0 0 16px; }
+.grid { display:grid; gap:16px; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); }
+.field { display:flex; flex-direction:column; gap:4px; font-size:14px; font-weight:600; min-width:0; }
+.row { display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; margin-bottom:12px; }
+.row .field { flex:1 1 170px; }
+input,select,textarea { font:inherit; padding:8px; border:1px solid #aaa39a; border-radius:6px; background:#fff; width:100%; font-weight:400; }
+textarea { min-height:130px; resize:vertical; }
+button { font:inherit; font-size:15px; padding:8px 14px; border-radius:6px; border:1px solid var(--accent); background:#fff; color:var(--accent); cursor:pointer; }
+button.primary { background:var(--accent); color:#fff; }
+button:disabled { opacity:.5; cursor:not-allowed; }
+button.small { padding:3px 9px; font-size:13px; }
+.btns { display:flex; flex-wrap:wrap; gap:8px; margin:8px 0; }
+.msg { padding:10px 12px; border-radius:6px; margin:10px 0; font-size:15px; }
+.msg.err { background:#fbeaec; color:var(--err); border:1px solid #e9b9bf; }
+.msg.ok { background:#e8f4eb; color:var(--ok); border:1px solid #b8dcc2; }
+.msg.note { background:var(--tan); border:1px solid var(--line); }
+.out { white-space:pre-wrap; background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:10px; margin:6px 0; overflow-wrap:anywhere; }
+.muted { color:var(--muted); font-size:14px; }
+.stat { font-size:28px; font-weight:700; color:var(--accent); }
+.tablewrap { overflow-x:auto; }
+table { border-collapse:collapse; width:100%; font-size:14px; }
+th,td { text-align:left; padding:7px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+th { background:var(--tan); }
+.pill { font-size:12px; padding:1px 8px; border-radius:99px; background:var(--tan); white-space:nowrap; }
+.pill.recording { background:#fbeaec; color:var(--err); }
+.pill.done,.pill.formatted { background:#e8f4eb; color:var(--ok); }
+.bar { background:var(--accent); height:12px; border-radius:3px; }
+.reqs { margin-top:20px; padding-top:10px; border-top:1px solid var(--line); font-size:13px; color:var(--muted); }
+details { margin:6px 0; }
+summary { cursor:pointer; color:var(--accent); font-size:14px; }
+figure { margin:0 0 20px; }
+figure a { display:block; border:1px solid var(--line); background:#fff; overflow-x:auto; }
+figure img { display:block; width:100%; min-width:760px; height:auto; }
+figcaption { font-size:13px; color:var(--muted); margin-top:4px; }
+ul.tight { margin:6px 0; padding-left:20px; }
+dl.req { display:grid; grid-template-columns:max-content 1fr; gap:4px 12px; margin:6px 0 14px; }
+dl.req dt { font-weight:700; color:var(--accent); }
+dl.req dd { margin:0; }
+#howView[hidden] { display:none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>FreeFlow Web</h1><span class="badge">PROTOTYPE</span>
+  <span class="spacer"></span>
+  <label for="roleSelect">Role
+    <select id="roleSelect" style="width:auto"><option value="student">Student</option><option value="coordinator">Study Group Coordinator</option></select>
+  </label>
+  <button id="resetBtn" class="small" style="background:#fff">Reset demo data</button>
+</header>
+<nav id="nav" aria-label="Main navigation"></nav>
+<main>
+  <div id="view"></div>
+
+  <section id="howView" hidden>
+    <h2>How this system works</h2>
+    <p class="muted">Static reference page. It explains who FreeFlow Web is for, what it must do, and how data and work move through it.</p>
+
+    <div class="card">
+      <h3>Target user and need</h3>
+      <p><b>Primary user group:</b> Business students who sit through long lectures and write constantly on laptops and need to turn speech into clean notes and text without paying for a dictation subscription.</p>
+      <p><b>Persona (fictional):</b> Maya Torres is a junior in a 75-minute management course. Typing notes means missing what is said, and plain speech-to-text leaves fillers and misspelled course terms. Maya needs usable notes and clean text at no cost.</p>
+      <p><b>Secondary stakeholder:</b> A study group coordinator who keeps the shared course vocabulary accurate and sets how long records are kept.</p>
+      <h3 style="margin-top:14px">Value model: free service</h3>
+      <ul class="tight">
+        <li><b>Who benefits:</b> students who get clean text and notes, and coordinators whose group shares one set of course terms.</li>
+        <li><b>Who bears the cost:</b> the volunteer maintainer gives time. Hosting and the browser's speech recognition are free, so no user pays.</li>
+        <li><b>What keeps it going:</b> open-source code on free hosting. The coordinator role keeps the vocabulary current, as constraints C-01 and C-02 require.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>Requirements</h3>
+      <h3 style="font-size:16px">Functional requirements</h3>
+      <dl class="req">
+        <dt>FR-01</dt><dd>The system shall capture a transcript from the microphone or from typed text.</dd>
+        <dt>FR-02</dt><dd>The system shall reject a transcript that breaks a word limit and show the business rule ID.</dd>
+        <dt>FR-03</dt><dd>The system shall clean a transcript by applying the course dictionary, removing fillers and self-corrections, and applying the destination's style.</dd>
+        <dt>FR-04</dt><dd>The system shall save each processed dictation and show its raw and finished text, with a copy button.</dd>
+        <dt>FR-05</dt><dd>The system shall search and filter saved dictations by text, destination, mode, and date range.</dd>
+        <dt>FR-06</dt><dd>The system shall let a student pin, delete, or transform a saved dictation without changing its raw transcript.</dd>
+        <dt>FR-07</dt><dd>The system shall move a lecture session through the statuses recording, processing, and done.</dd>
+        <dt>FR-08</dt><dd>The system shall generate study notes for a finished lecture: summary, key terms, exam points, and action items.</dd>
+        <dt>FR-09</dt><dd>The system shall report usage for a chosen period: dictations, words, estimated typing time saved, and lectures.</dd>
+        <dt>FR-10</dt><dd>The system shall let the coordinator add, edit, and delete course dictionary entries.</dd>
+        <dt>FR-11</dt><dd>The system shall let the coordinator set default styles and the retention period, and run a retention check that reports what was deleted.</dd>
+        <dt>FR-12</dt><dd>The system shall restore its synthetic sample data when "Reset demo data" is pressed.</dd>
+      </dl>
+      <h3 style="font-size:16px">Non-functional requirements</h3>
+      <dl class="req">
+        <dt>NFR-01</dt><dd><b>Performance:</b> The system shall process a 3,000-word transcript in 500 ms or less on a typical laptop, and show the measured time with each result.</dd>
+        <dt>NFR-02</dt><dd><b>Usability:</b> Every action blocked by a business rule shall show a message that begins with that rule's ID.</dd>
+        <dt>NFR-03</dt><dd><b>Privacy:</b> With typed input, the system shall make 0 network requests after the page loads, and shall store all data in browser storage.</dd>
+        <dt>NFR-04</dt><dd><b>Reliability:</b> Saved records shall still be present after the browser page is reloaded.</dd>
+        <dt>NFR-05</dt><dd><b>Compatibility:</b> Where a browser has no speech recognition, the microphone button shall be disabled with a notice, and typed input shall still work.</dd>
+      </dl>
+      <h3 style="font-size:16px">Business rules</h3>
+      <dl class="req" id="ruleList"></dl>
+      <h3 style="font-size:16px">Constraints</h3>
+      <dl class="req">
+        <dt>C-01</dt><dd>The system shall run only in a browser, with data in localStorage and with no login, database server, or paid service.</dd>
+        <dt>C-02</dt><dd>The system shall be hosted for free at a public link that needs no sign-in.</dd>
+        <dt>C-03</dt><dd>The system shall be built by one student and delivered by December 4, 2026.</dd>
+        <dt>C-04</dt><dd>The system shall use synthetic sample data only and shall be labeled a prototype.</dd>
+      </dl>
+    </div>
+
+    <div class="card">
+      <h3>Process models</h3>
+      <p class="muted">DFDs use Gane and Sarson notation. A dashed box on a Level-1 DFD is a neighboring process from Level-0. A two-headed arrow is a read before an update of a data store. Select a diagram to open it full size. All diagrams were generated as SVG by a Python script written with Claude Code.</p>
+
+      <figure><a href="diagrams/bpm.svg" target="_blank" rel="noopener"><img src="diagrams/bpm.svg" alt="BPM of one dictation from start to text in use, with one decision and one exception path"></a>
+        <figcaption>BPM: one dictation from start to text in use. Tool: Python script writing SVG, written with Claude Code.</figcaption></figure>
+      <figure><a href="diagrams/context.svg" target="_blank" rel="noopener"><img src="diagrams/context.svg" alt="Context diagram with the system, Student, Study Group Coordinator, and Browser Speech Service"></a>
+        <figcaption>Context diagram. Tool: Python script writing SVG, written with Claude Code.</figcaption></figure>
+      <figure><a href="diagrams/level0.svg" target="_blank" rel="noopener"><img src="diagrams/level0.svg" alt="Level-0 DFD with six processes and four data stores"></a>
+        <figcaption>Level-0 DFD: six processes and four data stores. Tool: Python script writing SVG, written with Claude Code.</figcaption></figure>
+      <figure><a href="diagrams/level1-2.svg" target="_blank" rel="noopener"><img src="diagrams/level1-2.svg" alt="Level-1 DFD of process 2.0 with subprocesses 2.1 to 2.4"></a>
+        <figcaption>Level-1 DFD of 2.0 Clean and Store Text, the process that enforces the most business rules (four). Tool: Python script writing SVG, written with Claude Code.</figcaption></figure>
+      <figure><a href="diagrams/level1-1.svg" target="_blank" rel="noopener"><img src="diagrams/level1-1.svg" alt="Level-1 DFD of process 1.0 with subprocesses 1.1 to 1.3"></a>
+        <figcaption>Level-1 DFD of 1.0 Capture Dictation. Tool: Python script writing SVG, written with Claude Code.</figcaption></figure>
+    </div>
+
+    <div class="card">
+      <h3>Data stores</h3>
+      <p class="muted">Store names match the localStorage keys in this page's code exactly.</p>
+      <div class="tablewrap"><table>
+        <tr><th>Store</th><th>Name</th><th>Key field</th><th>Other fields</th><th>Written by</th><th>Read by</th></tr>
+        <tr><td>D1</td><td>ff_dictations</td><td>id</td><td>createdAt, mode, status, destination, style, source, asrText, finalText, numWords, numDictionaryReplacements, cleanMs, pinned, transformName, ruleNote</td><td>2.0, 5.0, 6.0</td><td>5.0, 6.0</td></tr>
+        <tr><td>D2</td><td>ff_dictionary</td><td>id</td><td>phrase, replacement, isSnippet, source, frequencyUsed, createdAt</td><td>2.0, 3.0</td><td>2.0, 3.0, 4.0</td></tr>
+        <tr><td>D3</td><td>ff_lectures</td><td>id</td><td>courseCode, title, status, startedAt, endedAt, segments, notes</td><td>4.0</td><td>4.0, 5.0</td></tr>
+        <tr><td>D4</td><td>ff_settings</td><td>id</td><td>retentionDays, styles, lastPurgeAt</td><td>6.0</td><td>2.0, 6.0</td></tr>
+      </table></div>
+    </div>
+
+    <div class="card">
+      <h3>How the BPM maps to the DFD</h3>
+      <div class="tablewrap"><table>
+        <tr><th>BPM task</th><th>Type</th><th>DFD process</th><th>Why</th></tr>
+        <tr><td>Choose destination and mode</td><td>Manual</td><td>Provides input to 2.0</td><td>Only the student knows where the text is going.</td></tr>
+        <tr><td>Speak or type text</td><td>Manual</td><td>Provides input to 1.0</td><td>The ideas are the student's own.</td></tr>
+        <tr><td>Capture transcript</td><td>System-supported</td><td>1.0 (1.1)</td><td>The browser turns speech into text.</td></tr>
+        <tr><td>Validate word limits</td><td>System-supported</td><td>1.0 (1.2)</td><td>A fixed rule that software applies consistently.</td></tr>
+        <tr><td>Show error citing rule ID</td><td>System-supported</td><td>1.0 (1.2)</td><td>The exception path tells the student which rule blocked the input.</td></tr>
+        <tr><td>Fix the input</td><td>Manual</td><td>Provides input to 1.0</td><td>Only the student can say what was meant.</td></tr>
+        <tr><td>Clean and style text</td><td>System-supported</td><td>2.0 (2.1 to 2.3)</td><td>Repetitive editing is the main thing worth automating.</td></tr>
+        <tr><td>Save dictation record</td><td>System-supported</td><td>2.0 (2.4)</td><td>Students should not have to file their own history.</td></tr>
+        <tr><td>Paste into destination app</td><td>Manual</td><td>Receives output of 2.0</td><td>A web page cannot type into other apps, so this stays manual on purpose.</td></tr>
+        <tr><td>Proofread and correct</td><td>Manual</td><td>None</td><td>Rule-based cleanup can make mistakes, so the student stays responsible for the final text.</td></tr>
+      </table></div>
+    </div>
+
+    <div class="card">
+      <h3>Where each business rule appears</h3>
+      <div class="tablewrap"><table>
+        <tr><th>Rule</th><th>Process</th><th>Where to see it</th></tr>
+        <tr><td>BR-01, BR-02</td><td>1.0 (1.2), and the BPM decision</td><td>Dictate and Lectures screens</td></tr>
+        <tr><td>BR-03</td><td>2.0 (2.4)</td><td>Dictate and History screens</td></tr>
+        <tr><td>BR-04</td><td>2.0 (2.2)</td><td>Dictate screen, "Only fillers" sample</td></tr>
+        <tr><td>BR-05</td><td>2.0 (2.1)</td><td>Dictate screen, default sample</td></tr>
+        <tr><td>BR-06</td><td>2.0 (2.3)</td><td>Dictate screen, destination list</td></tr>
+        <tr><td>BR-07</td><td>3.0</td><td>Dictionary screen</td></tr>
+        <tr><td>BR-08</td><td>3.0 and 6.0</td><td>Open #dictionary or #settings as a Student</td></tr>
+        <tr><td>BR-09</td><td>4.0</td><td>Lectures screen</td></tr>
+        <tr><td>BR-10</td><td>6.0</td><td>Settings screen</td></tr>
+      </table></div>
+    </div>
+
+    <div class="card">
+      <h3>What this prototype cannot do</h3>
+      <ul class="tight">
+        <li>It is inspired by <a href="https://github.com/brian-stockwell/FreeFlow">FreeFlow</a>, a native Mac dictation app that cleans text with the Claude API. A paid API is not allowed here, so this version uses rule-based cleanup. It handles common fillers and corrections but does not understand meaning.</li>
+        <li>It cannot paste into other apps or record system audio, because a web page has no access to them.</li>
+        <li>In browsers such as Chrome, speech recognition may send microphone audio to the browser maker's speech service. Typed input never leaves the page.</li>
+        <li>Roles are a demo selector, not real security. Anyone can change the role or browser data. "Reset demo data" is a test control for graders, so it is not shown as a business process in the DFD.</li>
+        <li>Data lives in one browser only, and the role selector returns to Student when the page is reloaded.</li>
+      </ul>
+      <p><a href="ai-log.html">Read the AI use log</a>, which lists the prompts and changes used to build this project.</p>
+    </div>
+  </section>
+
+  <p id="reqNote" class="reqs"></p>
+</main>
+
+<script>
+"use strict";
+const KEYS = { dictations:"ff_dictations", dictionary:"ff_dictionary", lectures:"ff_lectures", settings:"ff_settings" };
+const WORD_MIN = 2, WORD_MAX = 3000, SIMILARITY_MIN = 0.3, TYPING_WPM = 45, SPEAKING_WPM = 150, DAY = 86400000;
+const RULES = {
+  "BR-01": "A dictation must contain at least 2 words. Anything shorter counts as an accidental tap.",
+  "BR-02": "A single dictation may not exceed 3,000 words, about 20 minutes of speech.",
+  "BR-03": "A raw transcript is kept word for word. Only clean mode may change the finished text.",
+  "BR-04": "Cleanup may remove fillers and self-corrections but may not lose the meaning. If less than 30% of the words match, the raw transcript is kept.",
+  "BR-05": "Course terms always use the spelling in the course dictionary, longest phrase first.",
+  "BR-06": "Writing style follows the destination, using the defaults the coordinator sets.",
+  "BR-07": "A dictionary phrase must have at least 2 characters and be unique, and a snippet must have an expansion.",
+  "BR-08": "Only the study group coordinator may change the course dictionary or settings, and coordinators do not use students' dictations.",
+  "BR-09": "A student may run only one lecture at a time. Each lecture needs a course code such as ISM4113 and at least 1 segment before it can end.",
+  "BR-10": "The retention period is 7 to 30 days, 14 by default. Unpinned dictations older than the period are deleted by a retention check."
+};
+const DESTINATIONS = { email:"Email", work:"Work messages", personal:"Personal messages", ai:"AI prompts", documents:"Documents", other:"Other" };
+const STYLES = { formal:"Formal", casual:"Casual", veryCasual:"Very casual", excited:"Excited!" };
+const VIEWS = {
+  home:{ label:"Home", roles:["student","coordinator"], reqs:"FR-12 · Screen: Home" },
+  dictate:{ label:"Dictate", roles:["student"], reqs:"FR-01, FR-02, FR-03, FR-04 · BR-01 to BR-06 · NFR-01, NFR-02, NFR-03, NFR-05 · DFD 1.0, 2.0" },
+  lectures:{ label:"Lectures", roles:["student"], reqs:"FR-01, FR-02, FR-07, FR-08 · BR-01, BR-02, BR-05, BR-09 · DFD 1.0, 4.0" },
+  history:{ label:"History", roles:["student"], reqs:"FR-05, FR-06 · BR-03 · NFR-04 · DFD 5.0" },
+  insights:{ label:"Insights", roles:["student"], reqs:"FR-09 · DFD 5.0" },
+  dictionary:{ label:"Dictionary", roles:["coordinator"], reqs:"FR-10 · BR-07, BR-08 · DFD 3.0" },
+  settings:{ label:"Settings", roles:["coordinator"], reqs:"FR-11 · BR-06, BR-08, BR-10 · DFD 6.0" },
+  how:{ label:"How this system works", roles:["student","coordinator"], reqs:"All requirements, the DFDs and the BPM" }
+};
+
+// ----- Browser storage -----
+const memory = {};
+function read(key) {
+  try { const v = localStorage.getItem(key); return v === null ? memory[key] ?? null : JSON.parse(v); }
+  catch { return memory[key] ?? null; }
+}
+function write(key, value) {
+  memory[key] = value;
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+}
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+const wordCount = s => (s.trim().match(/\S+/g) || []).length;
+const ruleMsg = id => `${id}: ${RULES[id]}`;
+const fmtDate = t => new Date(t).toLocaleDateString(undefined, { month:"short", day:"numeric", year:"numeric" });
+const inputDate = t => new Date(t).toISOString().slice(0, 10);
+
+function seed() {
+  const now = Date.now();
+  const entry = (phrase, replacement, isSnippet, frequencyUsed) => ({ id:uid(), phrase, replacement, isSnippet, source:"default", frequencyUsed, createdAt:now });
+  const dictionary = [
+    entry("data flow diagram", "data flow diagram (DFD)", false, 3),
+    entry("gain and sarson", "Gane and Sarson", false, 2),
+    entry("swim lane", "swimlane", false, 1),
+    entry("porters five forces", "Porter's Five Forces", false, 1),
+    entry("erp", "ERP", false, 2),
+    entry("office hours note", "Office hours are Tuesdays from 2 to 4 PM in Room 101.", true, 0)
+  ];
+  write(KEYS.dictionary, dictionary);
+  write(KEYS.settings, { id:"settings", retentionDays:14, styles:{ email:"formal", work:"formal", personal:"casual", other:"casual" }, lastPurgeAt:null });
+  const make = (daysAgo, mode, destination, asrText, pinned = false) => {
+    const r = processText(asrText, mode, "light", destination);
+    return { id:uid(), createdAt:now - daysAgo * DAY, mode, status:r.status, destination, style:r.style, source:"typed", asrText, finalText:r.text, numWords:wordCount(r.text), numDictionaryReplacements:r.replacements, cleanMs:r.ms, pinned, transformName:null, ruleNote:r.ruleNote };
+  };
+  write(KEYS.dictations, [
+    make(1, "clean", "email", "um hi professor I wanted to ask about the the assignment, you know, because I'm gonna be out on Friday, no wait, on Monday. can we meet at 2, actually 3?"),
+    make(3, "clean", "documents", "so basically the erp system connects, like, every department and our data flow diagram shows how orders move through it"),
+    make(5, "raw", "personal", "um yeah are we still meeting at the library tonight or whatever"),
+    make(8, "clean", "ai", "okay so I want you to make a study guide for chapter seven and uh keep it to one page"),
+    make(20, "clean", "work", "please send the group the slides before the the meeting on Thursday"),
+    make(25, "clean", "documents", "our case study says the firm should uh focus on customer retention", true)
+  ]);
+  const seededLecture = { id:uid(), courseCode:"MAN4720", title:"Competitive analysis", status:"done", startedAt:now - 2 * DAY, endedAt:now - 2 * DAY + 3000000, segments:[
+    { id:uid(), at:now - 2 * DAY, text:"um today we cover porters five forces. A barrier to entry is what makes it costly for a new firm to enter a market." },
+    { id:uid(), at:now - 2 * DAY + 900000, text:"This is important and it will be on the exam so remember the five forces." },
+    { id:uid(), at:now - 2 * DAY + 2400000, text:"Your industry analysis is due next Friday, so read chapter four before then." }
+  ], notes:null };
+  seededLecture.notes = buildNotes(seededLecture);
+  write(KEYS.lectures, [seededLecture]);
+}
+
+// ----- 2.0 Clean and Store Text -----
+const escapeRe = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+// 2.1 Apply Course Dictionary (BR-05)
+function applyDictionary(text, entries, countUse) {
+  let replacements = 0;
+  [...entries].sort((a, b) => b.phrase.length - a.phrase.length).forEach(e => {
+    const target = e.replacement || e.phrase;
+    const re = new RegExp(`(?<![\\p{L}\\p{N}])${escapeRe(e.phrase)}(?![\\p{L}\\p{N}])`, "giu");
+    text = text.replace(re, m => {
+      if (m === target) return m;
+      replacements++;
+      if (countUse) e.frequencyUsed++;
+      return target;
+    });
+  });
+  return { text, replacements };
+}
+// 2.2 Remove Fillers and Check Meaning (BR-04)
+function removeFillers(text, level) {
+  let t = " " + text.replace(/\s+/g, " ").trim() + " ";
+  t = t.replace(/(?:[^.!?]*[.!?]\s*)?[^.!?]*?\bscratch that\b[,.]?\s*/gi, m => {
+    const prior = m.replace(/\bscratch that\b[,.]?\s*$/i, "");
+    return /[.!?]\s*[^.!?]*$/.test(prior) && prior.replace(/[^.!?]*[.!?]\s*/, "").trim() ? prior.replace(/[^.!?]*$/, "") : " ";
+  });
+  t = t.replace(/\S+,\s*(?:actually|no wait|wait|i mean|sorry|or rather),?\s+/gi, " ");
+  t = t.replace(/\S+\s+no wait,?\s+/gi, " ");
+  t = t.replace(/\b(?:um+|uh+|er+|ah+|hmm+|mhm)\b[,.]?\s*/gi, "");
+  t = t.replace(/,?\s*\b(?:you know|i mean|basically|literally)\b,?/gi, "");
+  t = t.replace(/(^|[.!?]\s+|\s)(?:so|okay|ok|well|yeah|all right|alright),\s+/gi, "$1");
+  for (let i = 0; i < 2; i++) t = t.replace(/(^\s*|[.!?]\s+)(?:so|okay|ok|well|yeah)\s+(?=\w)/gi, "$1");
+  t = t.replace(/,\s*like,\s*/gi, " ").replace(/(^\s*|[.!?]\s+)like,?\s+/gi, "$1").replace(/\band like\b/gi, "and");
+  t = t.replace(/,?\s*\b(?:or whatever|type of thing|so yeah)\b/gi, "");
+  t = t.replace(/\b(\w+)(?:,?\s+\1\b)+/gi, "$1");
+  if (level === "medium") {
+    [[/\bin order to\b/gi, "to"], [/\bdue to the fact that\b/gi, "because"], [/\bat this point in time\b/gi, "now"], [/\b(?:really|very|just)\s+/gi, ""]]
+      .forEach(([re, to]) => { t = t.replace(re, to); });
+  }
+  return tidy(t);
+}
+function tidy(text) {
+  let t = text.replace(/\s+/g, " ").replace(/\s+([,.!?;:])/g, "$1").replace(/([,.!?;:]){2,}/g, "$1").trim().replace(/^[,.;:\s]+/, "");
+  t = t.replace(/\bi\b/g, "I").replace(/\bi'(m|ll|ve|d)\b/g, "I'$1");
+  t = t.replace(/(^|[.!?]\s+)(\p{Ll})/gu, (m, a, b) => a + b.toUpperCase());
+  if (t && !/[.!?:]$/.test(t)) t += ".";
+  return t;
+}
+function similarity(a, b) {
+  const split = s => s.toLowerCase().split(/[^\p{L}\p{N}']+/u).filter(Boolean);
+  const wa = split(a), wb = split(b);
+  if (!wa.length || !wb.length) return wa.length === wb.length ? 1 : 0;
+  let prev = new Int32Array(wb.length + 1);
+  for (let i = 1; i <= wa.length; i++) {
+    const cur = new Int32Array(wb.length + 1);
+    for (let j = 1; j <= wb.length; j++) cur[j] = wa[i - 1] === wb[j - 1] ? prev[j - 1] + 1 : Math.max(prev[j], cur[j - 1]);
+    prev = cur;
+  }
+  return prev[wb.length] / Math.max(wa.length, wb.length);
+}
+// 2.3 Apply Destination Style (BR-06)
+function styleFor(destination) {
+  const s = read(KEYS.settings).styles;
+  return s[destination] || s.other;
+}
+function applyStyle(text, style) {
+  if (style === "formal") {
+    return [[/\bgonna\b/gi, "going to"], [/\bwanna\b/gi, "want to"], [/\bgotta\b/gi, "got to"], [/\bkinda\b/gi, "kind of"], [/\byeah\b/gi, "yes"],
+      [/\bcan't\b/gi, "cannot"], [/\bwon't\b/gi, "will not"], [/n't\b/gi, " not"], [/\bI'm\b/g, "I am"], [/\bit's\b/gi, "it is"], [/\bwe're\b/gi, "we are"], [/\byou're\b/gi, "you are"], [/\bI'll\b/g, "I will"], [/\bI've\b/g, "I have"]]
+      .reduce((t, [re, to]) => t.replace(re, m => /^[A-Z]/.test(m) && to !== "I am" ? to[0].toUpperCase() + to.slice(1) : to), text);
+  }
+  if (style === "veryCasual") return text.replace(/(^|[.!?]\s+)(\p{Lu})(?=\p{Ll})/gu, (m, a, b) => a + b.toLowerCase()).replace(/\.$/, "");
+  if (style === "excited") return text.replace(/\.$/, "!");
+  return text;
+}
+// Runs 2.1 to 2.3 without storing anything. Raw mode passes the text through (BR-03).
+function processText(asrText, mode, level, destination, countUse = false) {
+  const started = performance.now();
+  const style = mode === "clean" ? styleFor(destination) : null;
+  let text = asrText.trim(), replacements = 0, status = "rawTranscript", ruleNote = null;
+  if (mode === "clean") {
+    const entries = read(KEYS.dictionary) || [];
+    const spelled = applyDictionary(text, entries, false);
+    const cleaned = removeFillers(spelled.text, level);
+    if (!cleaned || similarity(spelled.text, cleaned) < SIMILARITY_MIN) {
+      ruleNote = "BR-04";
+    } else {
+      text = applyStyle(cleaned, style);
+      replacements = spelled.replacements;
+      status = "formatted";
+      if (countUse) { applyDictionary(asrText, entries, true); write(KEYS.dictionary, entries); }
+    }
+  }
+  return { text, replacements, status, style:status === "formatted" ? style : null, ruleNote, ms:performance.now() - started };
+}
+
+// ----- 1.0 Capture Dictation -----
+// 1.2 Validate Word Limits (BR-01, BR-02)
+function validateWords(text) {
+  const n = wordCount(text);
+  if (n < WORD_MIN) return ruleMsg("BR-01") + ` This input has ${n}.`;
+  if (n > WORD_MAX) return ruleMsg("BR-02") + ` This input has ${n.toLocaleString()}.`;
+  return null;
+}
+// 1.1 Receive Speech or Text
+const SpeechApi = window.SpeechRecognition || window.webkitSpeechRecognition;
+let activeMic = null;
+function stopMic() { if (activeMic) { activeMic.stop(); activeMic = null; } }
+function wireMic(button, target, statusEl) {
+  if (!SpeechApi) {
+    button.disabled = true;
+    statusEl.textContent = "This browser has no speech recognition, so please type instead.";
+    return;
+  }
+  button.onclick = () => {
+    if (activeMic) { stopMic(); return; }
+    const rec = new SpeechApi();
+    rec.continuous = true; rec.interimResults = true; rec.lang = "en-US";
+    const base = target.value ? target.value.trimEnd() + " " : "";
+    let finals = "";
+    rec.onresult = e => {
+      let interim = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) finals += e.results[i][0].transcript;
+        else interim += e.results[i][0].transcript;
+      }
+      target.value = base + finals + interim;
+      target.dataset.source = "mic";
+    };
+    rec.onerror = e => {
+      statusEl.textContent = e.error === "not-allowed" || e.error === "service-not-allowed"
+        ? "Microphone access was blocked. You can allow it in the browser, or type instead."
+        : `Speech recognition stopped (${e.error}). You can try again or type instead.`;
+    };
+    rec.onend = () => { activeMic = null; button.textContent = "Start microphone"; };
+    try {
+      rec.start();
+      activeMic = rec;
+      button.textContent = "Stop microphone";
+      statusEl.textContent = "Listening. In some browsers, audio goes to the browser's speech service.";
+    } catch (err) { statusEl.textContent = "The microphone could not start. Please type instead."; }
+  };
+}
+
+// ----- 4.0 Run Lecture Session -----
+function buildNotes(lecture) {
+  const entries = read(KEYS.dictionary) || [];
+  const sentences = lecture.segments
+    .flatMap(s => removeFillers(applyDictionary(s.text, entries, false).text, "light").match(/[^.!?]+[.!?]+/g) || [])
+    .map(s => s.trim());
+  const full = sentences.join(" ");
+  const terms = new Set();
+  entries.filter(e => !e.isSnippet).forEach(e => {
+    const shown = e.replacement || e.phrase;
+    if (full.toLowerCase().includes(shown.toLowerCase())) terms.add(shown);
+  });
+  sentences.forEach(s => {
+    const m = s.match(/^(?:An?\s+|The\s+)?([\p{L}'-]+(?:\s+[\p{L}'-]+){0,3}?)\s+(?:is|are|means|refers to)\s+(?:what|a|an|the|when|how)\b/iu);
+    if (m) terms.add(m[1].trim());
+  });
+  return {
+    summary: sentences.slice(0, 3),
+    keyTerms: [...terms],
+    examPoints: sentences.filter(s => /\b(exam|test|quiz|important|remember|key point)\b/i.test(s)),
+    actionItems: sentences.filter(s => /\b(due|homework|assignment|submit|read|bring)\b/i.test(s)),
+    segmentCount: lecture.segments.length
+  };
+}
+
+// ----- 5.0 Review and Report History: transforms -----
+const TRANSFORMS = {
+  list: { label:"Turn into a list", run:t => (t.match(/[^.!?]+[.!?]*/g) || [t]).map(s => "- " + s.trim().replace(/[.!?]$/, "")).join("\n") },
+  concise: { label:"Make it concise", run:t => tidy(t.replace(/\b(?:really|very|just|quite|simply|actually)\s+/gi, "").replace(/\bin order to\b/gi, "to").replace(/\bdue to the fact that\b/gi, "because")) },
+  grammar: { label:"Fix grammar only", run:t => tidy(t.replace(/\b(\w+)\s+\1\b/gi, "$1").replace(/\bthere's (many|several|few|\w+s)\b/gi, "there are $1").replace(/\bless words\b/gi, "fewer words")) },
+  prompt: { label:"Prompt Engineer", run:t => {
+    const parts = (t.match(/[^.!?]+[.!?]*/g) || [t]).map(s => s.trim());
+    return `Goal: ${parts[0]}\n\nRequirements:\n` + (parts.length > 1 ? parts.slice(1).map(p => "- " + p).join("\n") : "- Follow the goal exactly.");
+  } }
+};
+
+// ----- App shell -----
+let role = "student", current = "home";
+const $ = (sel, root = document) => root.querySelector(sel);
+const viewEl = $("#view"), howEl = $("#howView");
+const msg = (el, kind, text) => { el.innerHTML = text ? `<div class="msg ${kind}" role="${kind === "err" ? "alert" : "status"}">${esc(text)}</div>` : ""; };
+
+function renderNav() {
+  $("#nav").innerHTML = Object.entries(VIEWS).filter(([, v]) => v.roles.includes(role))
+    .map(([k, v]) => `<a href="#${k}" class="${k === current ? "on" : ""}" ${k === current ? 'aria-current="page"' : ""}>${v.label}</a>`).join("");
+}
+function route() {
+  stopMic();
+  const wanted = location.hash.slice(1) || "home";
+  current = VIEWS[wanted] ? wanted : "home";
+  renderNav();
+  $("#reqNote").textContent = "Requirements on this screen: " + VIEWS[current].reqs;
+  const allowed = VIEWS[current].roles.includes(role);
+  howEl.hidden = !(current === "how");
+  if (current === "how") { viewEl.innerHTML = ""; window.scrollTo(0, 0); return; }
+  if (!allowed) {
+    viewEl.innerHTML = `<h2>${esc(VIEWS[current].label)}</h2><div class="msg err" role="alert">${esc(ruleMsg("BR-08"))} Change the role at the top of the page to continue.</div>`;
+    return;
+  }
+  ({ home:renderHome, dictate:renderDictate, lectures:renderLectures, history:renderHistory, insights:renderInsights, dictionary:renderDictionary, settings:renderSettings })[current]();
+  window.scrollTo(0, 0);
+}
+
+function renderHome() {
+  const d = read(KEYS.dictations), l = read(KEYS.lectures), w = read(KEYS.dictionary);
+  const student = role === "student";
+  viewEl.innerHTML = `
+    <h2>Say it. Get clean text and study notes.</h2>
+    <p>Business students can dictate instead of type, then turn long lectures into study notes for free. This prototype keeps everything in your browser and uses synthetic sample data.</p>
+    <div class="grid">
+      <div class="card"><div class="stat">${d.length}</div>saved dictations</div>
+      <div class="card"><div class="stat">${l.length}</div>lectures</div>
+      <div class="card"><div class="stat">${w.length}</div>course dictionary entries</div>
+    </div>
+    <div class="card"><h3>As ${student ? "a Student" : "a Study Group Coordinator"}, you can:</h3>
+      <ul class="tight">${student ? `
+        <li><a href="#dictate">Dictate</a> by microphone or typing, and get clean text for where it is going.</li>
+        <li><a href="#lectures">Run a lecture session</a> and generate study notes.</li>
+        <li><a href="#history">Search your history</a>, pin entries, and rewrite them with a transform.</li>
+        <li><a href="#insights">See your usage</a> and estimated typing time saved.</li>` : `
+        <li><a href="#dictionary">Maintain the course dictionary</a> so that terms are spelled correctly for the whole group.</li>
+        <li><a href="#settings">Set default writing styles and retention</a>, and run a retention check.</li>`}
+      </ul>
+      <p class="muted">Switch roles with the selector at the top of the page.</p></div>
+    <div class="card"><h3>Grader's two-minute tour</h3>
+      <ol class="tight" style="padding-left:20px;margin:6px 0">
+        <li>On <b>Dictate</b>, press "Default sample", then "Process dictation". Compare the raw and finished text.</li>
+        <li>Press "Too short" and process it to see error handling cite BR-01.</li>
+        <li>On <b>Lectures</b>, start a lecture for ISM4113, add a segment, and end it to get study notes.</li>
+        <li>Switch to the coordinator. On <b>Settings</b>, run the retention check. It deletes old records, except pinned ones.</li>
+        <li>Read <a href="#how">How this system works</a> for the requirements, DFDs and BPM.</li>
+      </ol></div>`;
+}
+
+const SAMPLES = {
+  normal: "um so basically our data flow diagram uses gain and sarson notation, you know, and I'm gonna send it to the the team on Friday, no wait, on Monday. we can't finish the swim lane until then",
+  short: "um",
+  long: Array(3001).fill("word").join(" "),
+  fillers: "um uh er hmm um uh you know basically um uh"
+};
+function renderDictate() {
+  const options = Object.entries(DESTINATIONS).map(([k, v]) => `<option value="${k}">${v}</option>`).join("");
+  viewEl.innerHTML = `<h2>Dictate</h2>
+    <form class="card" id="dictForm" novalidate>
+      <div class="row">
+        <label class="field">Destination<select id="dDest">${options}</select></label>
+        <label class="field">Mode<select id="dMode"><option value="clean">Clean</option><option value="raw">Raw (word for word)</option></select></label>
+        <label class="field">Cleanup level<select id="dLevel"><option value="light">Light: fillers and grammar</option><option value="medium">Medium: also shortens phrases</option></select></label>
+      </div>
+      <label class="field">Transcript<textarea id="dText" placeholder="Press Start microphone and speak, or type here."></textarea></label>
+      <p class="muted" id="micStatus" aria-live="polite">Typed text stays in this browser.</p>
+      <div class="btns">
+        <button type="button" id="micBtn">Start microphone</button>
+        <button type="submit" class="primary">Process dictation</button>
+        <button type="button" id="clearBtn">Clear</button>
+      </div>
+      <div class="btns"><span class="muted" style="align-self:center">Test samples:</span>
+        <button type="button" class="small" data-sample="normal">Default sample</button>
+        <button type="button" class="small" data-sample="short">Too short</button>
+        <button type="button" class="small" data-sample="long">Too long</button>
+        <button type="button" class="small" data-sample="fillers">Only fillers</button>
+      </div>
+      <div id="dMsg"></div>
+    </form>
+    <div id="dResult"></div>`;
+  const text = $("#dText"), box = $("#dMsg");
+  wireMic($("#micBtn"), text, $("#micStatus"));
+  text.oninput = () => { if (!activeMic) delete text.dataset.source; };
+  $("#clearBtn").onclick = () => { stopMic(); text.value = ""; delete text.dataset.source; msg(box); $("#dResult").innerHTML = ""; };
+  viewEl.querySelectorAll("[data-sample]").forEach(b => { b.onclick = () => { text.value = SAMPLES[b.dataset.sample]; delete text.dataset.source; msg(box); }; });
+  $("#dictForm").onsubmit = e => {
+    e.preventDefault();
+    const source = text.dataset.source === "mic" ? "mic" : "typed";
+    stopMic();
+    const err = validateWords(text.value);
+    if (err) { msg(box, "err", err); $("#dResult").innerHTML = ""; return; }
+    msg(box);
+    const destination = $("#dDest").value, mode = $("#dMode").value;
+    const r = processText(text.value, mode, $("#dLevel").value, destination, true);
+    // 2.4 Save and Return Text (BR-03)
+    const rec = { id:uid(), createdAt:Date.now(), mode, status:r.status, destination, style:r.style, source, asrText:text.value.trim(), finalText:r.text, numWords:wordCount(r.text), numDictionaryReplacements:r.replacements, cleanMs:Math.round(r.ms * 10) / 10, pinned:false, transformName:null, ruleNote:r.ruleNote };
+    const all = read(KEYS.dictations); all.unshift(rec); write(KEYS.dictations, all);
+    $("#dResult").innerHTML = `<div class="card">
+      <h3>Finished text <span class="pill ${esc(rec.status)}">${rec.status === "formatted" ? "formatted" : "raw transcript"}</span></h3>
+      ${rec.ruleNote ? `<div class="msg note">${esc(ruleMsg(rec.ruleNote))} The raw transcript was kept.</div>` : ""}
+      <div class="out" id="dOut">${esc(rec.finalText)}</div>
+      <div class="btns"><button type="button" id="copyBtn">Copy text</button><a href="#history" style="align-self:center">Open history</a></div>
+      <p class="muted">Saved to history. ${rec.numWords.toLocaleString()} words · ${rec.numDictionaryReplacements} dictionary replacements · ${rec.style ? "Style: " + STYLES[rec.style] + " · " : ""}Processed in ${rec.cleanMs} ms</p>
+      <details><summary>Show raw transcript</summary><div class="out">${esc(rec.asrText)}</div></details>
+    </div>`;
+    wireCopy($("#copyBtn"), rec.finalText);
+  };
+}
+function wireCopy(btn, value) {
+  btn.onclick = async () => {
+    try { await navigator.clipboard.writeText(value); btn.textContent = "Copied"; }
+    catch { btn.textContent = "Copy blocked: select the text instead"; }
+  };
+}
+
+function renderLectures() {
+  const lectures = read(KEYS.lectures);
+  const active = lectures.find(l => l.status === "recording" || l.status === "processing");
+  viewEl.innerHTML = `<h2>Lectures</h2>
+    <form class="card" id="startForm" novalidate>
+      <h3>Start a lecture</h3>
+      <div class="row">
+        <label class="field">Course code<input id="lCourse" placeholder="ISM4113" autocomplete="off"></label>
+        <label class="field">Title (optional)<input id="lTitle" placeholder="Chapter 7" autocomplete="off"></label>
+        <button type="submit" class="primary">Start lecture</button>
+      </div>
+      <div id="lMsg"></div>
+    </form>
+    <div id="activeBox">${active ? activeLectureHtml(active) : ""}</div>
+    <div class="card"><h3>All lectures</h3>${lectures.length ? lectures.map(lectureRow).join("") : '<p class="muted">No lectures yet.</p>'}</div>`;
+  $("#startForm").onsubmit = e => {
+    e.preventDefault();
+    const box = $("#lMsg");
+    const course = $("#lCourse").value.trim().toUpperCase().replace(/\s+/g, "");
+    const all = read(KEYS.lectures);
+    if (all.some(l => l.status === "recording" || l.status === "processing")) return msg(box, "err", ruleMsg("BR-09") + " End the current lecture first.");
+    if (!/^[A-Z]{3}\d{4}[A-Z]?$/.test(course)) return msg(box, "err", ruleMsg("BR-09") + " The course code is missing or not valid.");
+    all.unshift({ id:uid(), courseCode:course, title:$("#lTitle").value.trim() || "Untitled lecture", status:"recording", startedAt:Date.now(), endedAt:null, segments:[], notes:null });
+    write(KEYS.lectures, all);
+    renderLectures();
+  };
+  if (active && active.status === "recording") wireActiveLecture(active.id);
+  viewEl.querySelectorAll("[data-del-lecture]").forEach(b => {
+    b.onclick = () => { write(KEYS.lectures, read(KEYS.lectures).filter(l => l.id !== b.dataset.delLecture)); renderLectures(); };
+  });
+}
+function activeLectureHtml(l) {
+  return `<div class="card"><h3>${esc(l.courseCode)}: ${esc(l.title)} <span class="pill ${esc(l.status)}">${esc(l.status)}</span></h3>
+    <form id="segForm" novalidate>
+      <label class="field">Next segment<textarea id="lSeg" placeholder="Press Start microphone and speak, or type what was said."></textarea></label>
+      <p class="muted" id="lMic" aria-live="polite"></p>
+      <div class="btns"><button type="button" id="lMicBtn">Start microphone</button><button type="submit">Add segment</button>
+      <button type="button" class="small" id="lSample">Sample segment</button>
+      <button type="button" class="primary" id="endBtn">End lecture and make notes</button></div>
+      <div id="segMsg"></div>
+    </form>
+    <p class="muted">${l.segments.length} segment${l.segments.length === 1 ? "" : "s"} so far</p>
+    ${l.segments.map(s => `<div class="out">${esc(s.text)}</div>`).join("")}</div>`;
+}
+function wireActiveLecture(id) {
+  const box = $("#segMsg"), seg = $("#lSeg");
+  wireMic($("#lMicBtn"), seg, $("#lMic"));
+  $("#lSample").onclick = () => { seg.value = "A value chain is what links the activities that create value for a customer. This is important and it will be on the exam. Your memo is due Friday."; };
+  $("#segForm").onsubmit = e => {
+    e.preventDefault();
+    stopMic();
+    const err = validateWords(seg.value);
+    if (err) return msg(box, "err", err);
+    const all = read(KEYS.lectures), l = all.find(x => x.id === id);
+    l.segments.push({ id:uid(), at:Date.now(), text:seg.value.trim() });
+    write(KEYS.lectures, all);
+    renderLectures();
+  };
+  $("#endBtn").onclick = () => {
+    stopMic();
+    const all = read(KEYS.lectures), l = all.find(x => x.id === id);
+    if (!l.segments.length) return msg(box, "err", ruleMsg("BR-09") + " Add a segment first.");
+    l.status = "processing";
+    write(KEYS.lectures, all);
+    renderLectures();
+    setTimeout(() => {
+      const again = read(KEYS.lectures), rec = again.find(x => x.id === id);
+      if (!rec) return;
+      rec.notes = buildNotes(rec); rec.status = "done"; rec.endedAt = Date.now();
+      write(KEYS.lectures, again);
+      if (current === "lectures") renderLectures();
+    }, 500);
+  };
+}
+function lectureRow(l) {
+  const n = l.notes;
+  const list = (title, rows) => `<b>${title}</b>${rows.length ? `<ul class="tight">${rows.map(r => `<li>${esc(r)}</li>`).join("")}</ul>` : '<p class="muted" style="margin:2px 0 8px">None found.</p>'}`;
+  return `<details ${l.status === "done" && l === read(KEYS.lectures)[0] ? "open" : ""}><summary>${esc(l.courseCode)}: ${esc(l.title)} · ${fmtDate(l.startedAt)}</summary>
+    <p><span class="pill ${esc(l.status)}">${esc(l.status)}</span> ${l.segments.length} segments</p>
+    ${n ? list("Summary", n.summary) + list("Key terms", n.keyTerms) + list("Exam points", n.examPoints) + list("Action items", n.actionItems) : ""}
+    ${l.status === "done" ? `<button class="small" data-del-lecture="${esc(l.id)}">Delete lecture</button>` : ""}</details>`;
+}
+
+function renderHistory() {
+  const opts = Object.entries(DESTINATIONS).map(([k, v]) => `<option value="${k}">${v}</option>`).join("");
+  viewEl.innerHTML = `<h2>History</h2>
+    <form class="card" id="hForm" novalidate>
+      <div class="row">
+        <label class="field">Search text<input id="hText" placeholder="Search raw and finished text"></label>
+        <label class="field">Destination<select id="hDest"><option value="">All</option>${opts}</select></label>
+        <label class="field">Mode<select id="hMode"><option value="">All</option><option value="clean">Clean</option><option value="raw">Raw</option></select></label>
+        <label class="field">From<input type="date" id="hFrom"></label>
+        <label class="field">To<input type="date" id="hTo"></label>
+      </div>
+      <div class="btns"><button type="submit" class="primary">Search</button><button type="button" id="hClear">Clear filters</button></div>
+      <div id="hMsg"></div>
+    </form>
+    <div id="hList"></div>`;
+  const run = () => {
+    const from = $("#hFrom").value, to = $("#hTo").value;
+    if (from && to && from > to) { msg($("#hMsg"), "err", "The From date must be on or before the To date."); return; }
+    msg($("#hMsg"));
+    const q = $("#hText").value.trim().toLowerCase(), dest = $("#hDest").value, mode = $("#hMode").value;
+    const rows = read(KEYS.dictations).filter(r => {
+      const day = inputDate(r.createdAt);
+      return (!q || (r.asrText + " " + r.finalText).toLowerCase().includes(q)) && (!dest || r.destination === dest) && (!mode || r.mode === mode) && (!from || day >= from) && (!to || day <= to);
+    }).sort((a, b) => b.pinned - a.pinned || b.createdAt - a.createdAt);
+    drawHistory(rows, run);
+  };
+  $("#hForm").onsubmit = e => { e.preventDefault(); run(); };
+  $("#hClear").onclick = () => { $("#hForm").reset(); run(); };
+  run();
+}
+function drawHistory(rows, refresh) {
+  const options = Object.entries(TRANSFORMS).map(([k, t]) => `<option value="${k}">${t.label}</option>`).join("");
+  $("#hList").innerHTML = `<p class="muted">${rows.length} result${rows.length === 1 ? "" : "s"}</p>` + rows.map(r => `
+    <div class="card" data-id="${esc(r.id)}">
+      <div class="btns" style="margin-top:0;align-items:center">
+        <b>${esc(DESTINATIONS[r.destination])}</b><span class="pill ${esc(r.status)}">${r.mode === "clean" ? (r.status === "formatted" ? "clean" : "clean, kept raw") : "raw"}</span>
+        ${r.pinned ? '<span class="pill">pinned</span>' : ""}${r.transformName ? `<span class="pill">${esc(r.transformName)}</span>` : ""}<span class="muted">${fmtDate(r.createdAt)} · ${r.numWords.toLocaleString()} words</span>
+      </div>
+      <div class="out">${esc(r.finalText.length > 600 ? r.finalText.slice(0, 600) + "…" : r.finalText)}</div>
+      <details><summary>Show raw transcript</summary><div class="out">${esc(r.asrText.length > 600 ? r.asrText.slice(0, 600) + "…" : r.asrText)}</div></details>
+      <div class="row" style="margin:8px 0 0">
+        <label class="field">Transform<select data-tf>${options}</select></label>
+        <button type="button" data-act="transform">Apply</button>
+        <button type="button" data-act="copy">Copy</button>
+        <button type="button" data-act="pin">${r.pinned ? "Unpin" : "Pin"}</button>
+        <button type="button" data-act="delete">Delete</button>
+      </div>
+    </div>`).join("");
+  $("#hList").querySelectorAll("[data-act]").forEach(btn => {
+    btn.onclick = () => {
+      const card = btn.closest("[data-id]"), id = card.dataset.id, all = read(KEYS.dictations), rec = all.find(x => x.id === id);
+      const act = btn.dataset.act;
+      if (act === "copy") { wireCopy(btn, rec.finalText); btn.click(); return; }
+      if (act === "delete") write(KEYS.dictations, all.filter(x => x.id !== id));
+      else {
+        if (act === "pin") rec.pinned = !rec.pinned;
+        if (act === "transform") {
+          const t = TRANSFORMS[$("[data-tf]", card).value];
+          rec.finalText = t.run(rec.finalText); rec.transformName = t.label; rec.numWords = wordCount(rec.finalText);
+        }
+        write(KEYS.dictations, all);
+      }
+      refresh();
+    };
+  });
+}
+
+function renderInsights() {
+  viewEl.innerHTML = `<h2>Insights</h2>
+    <div class="card"><label class="field" style="max-width:240px">Period<select id="iRange"><option value="7">Last 7 days</option><option value="14" selected>Last 14 days</option><option value="30">Last 30 days</option><option value="all">All saved data</option></select></label></div>
+    <div id="iOut"></div>`;
+  const draw = () => {
+    const v = $("#iRange").value, cutoff = v === "all" ? 0 : Date.now() - Number(v) * DAY;
+    const rows = read(KEYS.dictations).filter(r => r.createdAt >= cutoff);
+    const lectures = read(KEYS.lectures).filter(l => l.startedAt >= cutoff);
+    const words = rows.reduce((n, r) => n + r.numWords, 0);
+    const saved = words / TYPING_WPM - words / SPEAKING_WPM;
+    const cleaned = rows.filter(r => r.status === "formatted").length;
+    const counts = Object.keys(DESTINATIONS).map(k => [DESTINATIONS[k], rows.filter(r => r.destination === k).length]);
+    const top = Math.max(1, ...counts.map(c => c[1]));
+    const terms = [...read(KEYS.dictionary)].filter(e => e.frequencyUsed > 0).sort((a, b) => b.frequencyUsed - a.frequencyUsed).slice(0, 5);
+    $("#iOut").innerHTML = `<div class="grid">
+        <div class="card"><div class="stat">${rows.length}</div>dictations, ${cleaned} cleaned</div>
+        <div class="card"><div class="stat">${words.toLocaleString()}</div>words</div>
+        <div class="card"><div class="stat">${saved < 1 && saved > 0 ? "Under 1" : Math.round(saved)} min</div>estimated typing time saved</div>
+        <div class="card"><div class="stat">${lectures.length}</div>lectures, ${lectures.filter(l => l.status === "done").length} with notes</div>
+      </div>
+      <div class="card"><h3>Dictations by destination</h3><div class="tablewrap"><table>${counts.map(([n, c]) => `<tr><td style="width:170px">${esc(n)}</td><td style="width:50px">${c}</td><td><div class="bar" style="width:${c / top * 100}%"></div></td></tr>`).join("")}</table></div></div>
+      <div class="card"><h3>Most-used course terms</h3>${terms.length ? `<ul class="tight">${terms.map(t => `<li>${esc(t.replacement || t.phrase)}: ${t.frequencyUsed}</li>`).join("")}</ul>` : '<p class="muted">None yet.</p>'}</div>
+      <p class="muted">Time saved assumes typing at ${TYPING_WPM} and speaking at ${SPEAKING_WPM} words per minute. The course-term counts cover all saved data.</p>`;
+  };
+  $("#iRange").onchange = draw;
+  draw();
+}
+
+function renderDictionary(editId) {
+  const entries = read(KEYS.dictionary);
+  const editing = entries.find(e => e.id === editId);
+  viewEl.innerHTML = `<h2>Course dictionary</h2>
+    <form class="card" id="wForm" novalidate>
+      <h3>${editing ? "Edit entry" : "Add an entry"}</h3>
+      <div class="row">
+        <label class="field">Heard as (phrase)<input id="wPhrase" value="${esc(editing?.phrase)}" autocomplete="off"></label>
+        <label class="field">Replace with<input id="wRep" value="${esc(editing?.replacement)}" autocomplete="off"></label>
+        <label class="field">Type<select id="wType"><option value="term">Course term</option><option value="snippet" ${editing?.isSnippet ? "selected" : ""}>Snippet</option></select></label>
+      </div>
+      <div class="btns"><button type="submit" class="primary">${editing ? "Save changes" : "Add entry"}</button>${editing ? '<button type="button" id="wCancel">Cancel</button>' : ""}</div>
+      <div id="wMsg"></div>
+    </form>
+    <div class="card"><div class="tablewrap"><table>
+      <tr><th>Phrase</th><th>Replacement</th><th>Type</th><th>Times used</th><th></th></tr>
+      ${entries.map(e => `<tr><td>${esc(e.phrase)}</td><td>${esc(e.replacement || "")}</td><td>${e.isSnippet ? "Snippet" : "Course term"}</td><td>${e.frequencyUsed}</td>
+        <td><button class="small" data-edit="${esc(e.id)}">Edit</button> <button class="small" data-del="${esc(e.id)}">Delete</button></td></tr>`).join("")}
+    </table></div></div>`;
+  if (editing) $("#wCancel").onclick = () => renderDictionary();
+  $("#wForm").onsubmit = e => {
+    e.preventDefault();
+    const box = $("#wMsg"), phrase = $("#wPhrase").value.trim(), replacement = $("#wRep").value.trim(), isSnippet = $("#wType").value === "snippet";
+    const all = read(KEYS.dictionary);
+    if (phrase.length < 2) return msg(box, "err", ruleMsg("BR-07") + " The phrase is too short.");
+    if (all.some(x => x.phrase.toLowerCase() === phrase.toLowerCase() && x.id !== editId)) return msg(box, "err", ruleMsg("BR-07") + " This phrase already exists.");
+    if (isSnippet && !replacement) return msg(box, "err", ruleMsg("BR-07") + " Add the expansion text.");
+    if (editing) Object.assign(all.find(x => x.id === editId), { phrase, replacement, isSnippet });
+    else all.push({ id:uid(), phrase, replacement, isSnippet, source:"manual", frequencyUsed:0, createdAt:Date.now() });
+    write(KEYS.dictionary, all);
+    renderDictionary();
+    msg($("#wMsg"), "ok", `Saved "${phrase}".`);
+  };
+  viewEl.querySelectorAll("[data-edit]").forEach(b => { b.onclick = () => renderDictionary(b.dataset.edit); });
+  viewEl.querySelectorAll("[data-del]").forEach(b => { b.onclick = () => { write(KEYS.dictionary, read(KEYS.dictionary).filter(x => x.id !== b.dataset.del)); renderDictionary(); }; });
+}
+
+function renderSettings() {
+  const s = read(KEYS.settings);
+  const styleSelect = (key, label) => `<label class="field">${label}<select id="s_${key}">${Object.entries(STYLES).map(([k, v]) => `<option value="${k}" ${s.styles[key] === k ? "selected" : ""}>${v}</option>`).join("")}</select></label>`;
+  const all = read(KEYS.dictations), cutoff = Date.now() - s.retentionDays * DAY;
+  const due = all.filter(r => r.createdAt < cutoff && !r.pinned).length, kept = all.filter(r => r.createdAt < cutoff && r.pinned).length;
+  viewEl.innerHTML = `<h2>Settings</h2>
+    <form class="card" id="sForm" novalidate>
+      <h3>Default writing styles</h3>
+      <div class="row">${styleSelect("email", "Email")}${styleSelect("work", "Work messages")}${styleSelect("personal", "Personal messages")}${styleSelect("other", "AI prompts, documents and other")}</div>
+      <h3>Retention</h3>
+      <div class="row"><label class="field" style="max-width:200px">Keep dictations for (days)<input id="sDays" type="number" min="7" max="30" value="${s.retentionDays}"></label></div>
+      <div class="btns"><button type="submit" class="primary">Save settings</button></div>
+      <div id="sMsg"></div>
+    </form>
+    <div class="card"><h3>Retention check</h3>
+      <p>${due} dictation${due === 1 ? " is" : "s are"} past the ${s.retentionDays}-day period and will be deleted. ${kept} pinned dictation${kept === 1 ? " is" : "s are"} kept.</p>
+      <p class="muted">Last run: ${s.lastPurgeAt ? new Date(s.lastPurgeAt).toLocaleString() : "never"}</p>
+      <div class="btns"><button type="button" id="purgeBtn">Run retention check</button></div><div id="pMsg"></div></div>`;
+  $("#sForm").onsubmit = e => {
+    e.preventDefault();
+    const raw = $("#sDays").value, days = Number(raw);
+    if (!raw || !Number.isInteger(days) || days < 7 || days > 30) return msg($("#sMsg"), "err", ruleMsg("BR-10") + " Enter a whole number from 7 to 30.");
+    const next = read(KEYS.settings);
+    next.retentionDays = days;
+    ["email", "work", "personal", "other"].forEach(k => { next.styles[k] = $("#s_" + k).value; });
+    write(KEYS.settings, next);
+    renderSettings();
+    msg($("#sMsg"), "ok", "Settings saved.");
+  };
+  $("#purgeBtn").onclick = () => {
+    const now = Date.now(), cfg = read(KEYS.settings), rows = read(KEYS.dictations), limit = now - cfg.retentionDays * DAY;
+    const keep = rows.filter(r => r.createdAt >= limit || r.pinned), removed = rows.length - keep.length;
+    write(KEYS.dictations, keep);
+    cfg.lastPurgeAt = now;
+    write(KEYS.settings, cfg);
+    renderSettings();
+    msg($("#pMsg"), "ok", `Retention check finished: ${removed} deleted, ${keep.length} kept.`);
+  };
+}
+
+// ----- Start -----
+$("#ruleList").innerHTML = Object.entries(RULES).map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join("");
+if (!read(KEYS.settings) || !read(KEYS.dictionary) || !read(KEYS.dictations) || !read(KEYS.lectures)) seed();
+$("#roleSelect").onchange = e => {
+  role = e.target.value;
+  const allowed = VIEWS[current].roles.includes(role);
+  if (!allowed && location.hash !== "#home") location.hash = "#home"; else route();
+};
+$("#resetBtn").onclick = () => { seed(); location.hash = "#home"; route(); };
+window.addEventListener("hashchange", route);
+route();
+</script>
+</body>
+</html>

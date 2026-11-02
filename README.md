@@ -4,6 +4,8 @@ A native macOS voice dictation app, built as a free alternative to Wispr Flow. S
 
 **[Try the interactive tutorial →](https://brian-stockwell.github.io/FreeFlow/)** It covers every feature and runs in your browser, no install needed.
 
+**[FreeFlow Web →](https://brian-stockwell.github.io/FreeFlow/system/)** is a browser prototype built for a systems analysis and design class project. It has its own requirements, DFDs and BPM, and uses rule-based cleanup instead of the Claude API.
+
 - **Hold Fn**: raw transcript (on-device Apple speech, free).
 - **Hold Fn + Ctrl**: transcript cleaned up by Claude Haiku and formatted for where you're typing (email, Slack, AI prompt, document).
 - **Hold Fn + Option**: Command Mode. Speak an instruction about the selected text.
